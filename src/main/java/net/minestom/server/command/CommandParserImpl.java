@@ -8,7 +8,7 @@ import net.minestom.server.command.builder.CommandExecutor;
 import net.minestom.server.command.builder.condition.CommandCondition;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
 import net.minestom.server.command.builder.suggestion.Suggestion;
-import net.minestom.server.command.builder.suggestion.SuggestionCallback;
+import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,8 +62,8 @@ final class CommandParserImpl implements CommandParser {
             return (sender, context) -> globalListeners.forEach(x -> x.apply(sender, context));
         }
 
-        SuggestionCallback extractSuggestionCallback() {
-            return nodeResults.peekLast().callback;
+        Arg.Suggestion.Type extractSuggestion() {
+            return nodeResults.peekLast().suggestionType;
         }
 
         Map<String, ArgumentResult<Object>> collectArguments() {
@@ -94,7 +94,7 @@ final class CommandParserImpl implements CommandParser {
                 } else {
                     return new InvalidCommand(input, chain.mergedConditions(),
                             argumentCallback, e, chain.collectArguments(), chain.mergedGlobalExecutors(),
-                            chain.extractSuggestionCallback(), chain.getArgs());
+                            chain.extractSuggestion(), chain.getArgs());
                 }
             }
             parent = result.node;
@@ -162,11 +162,11 @@ final class CommandParserImpl implements CommandParser {
             }
         }
         for (Node node : parent.next()) {
-            final SuggestionCallback suggestionCallback = null;
-            if (suggestionCallback != null) {
+            final Arg.Suggestion.Type suggestionType = node.argument().suggestionType();
+            if (suggestionType != null) {
                 return new NodeResult(parent,
                         new ArgumentResult.SyntaxError<>("None of the arguments were compatible, but a suggestion callback was found.", "", -1),
-                        suggestionCallback);
+                        suggestionType);
             }
         }
         return null;
@@ -200,16 +200,19 @@ final class CommandParserImpl implements CommandParser {
 
         CommandExecutor globalListener();
 
-        @Nullable SuggestionCallback suggestionCallback();
+        @Nullable Arg.Suggestion.Type suggestionType();
 
         @Override
         default @Nullable Suggestion suggestion(CommandSender sender) {
-            final SuggestionCallback callback = suggestionCallback();
-            if (callback == null) return null;
-            final int lastSpace = input().lastIndexOf(" ");
-            final Suggestion suggestion = new Suggestion(input(), lastSpace + 2, input().length() - lastSpace - 1);
+            final Arg.Suggestion.Type suggestionType = suggestionType();
+            if (suggestionType == null) return null;
             final CommandContext context = createCommandContext(input(), arguments());
-            callback.apply(sender, context, suggestion);
+            final Arg.Suggestion.Entry result = suggestionType.suggest(sender, context);
+
+            Suggestion suggestion = new Suggestion(input(), result.start(), result.length());
+            for (var match : result.matches()) {
+                suggestion.addEntry(new SuggestionEntry(match.text(), match.tooltip()));
+            }
             return suggestion;
         }
     }
@@ -217,14 +220,14 @@ final class CommandParserImpl implements CommandParser {
     record InvalidCommand(String input, CommandCondition condition, ArgumentCallback callback,
                           ArgumentResult.SyntaxError<?> error,
                           @NotNull Map<String, ArgumentResult<Object>> arguments, CommandExecutor globalListener,
-                          @Nullable SuggestionCallback suggestionCallback, List<Arg<?>> args)
+                          @Nullable Arg.Suggestion.Type suggestionType, List<Arg<?>> args)
             implements InternalKnownCommand, Result.KnownCommand.Invalid {
 
         static InvalidCommand invalid(String input, Chain chain) {
             return new InvalidCommand(input, chain.mergedConditions(),
                     null/*todo command syntax callback*/,
                     new ArgumentResult.SyntaxError<>("Command has trailing data.", null, -1),
-                    chain.collectArguments(), chain.mergedGlobalExecutors(), chain.extractSuggestionCallback(), chain.getArgs());
+                    chain.collectArguments(), chain.mergedGlobalExecutors(), chain.extractSuggestion(), chain.getArgs());
         }
 
         @Override
@@ -235,18 +238,18 @@ final class CommandParserImpl implements CommandParser {
 
     record ValidCommand(String input, CommandCondition condition, CommandExecutor executor,
                         @NotNull Map<String, ArgumentResult<Object>> arguments,
-                        CommandExecutor globalListener, @Nullable SuggestionCallback suggestionCallback,
+                        CommandExecutor globalListener, @Nullable Arg.Suggestion.Type suggestionType,
                         List<Arg<?>> args)
             implements InternalKnownCommand, Result.KnownCommand.Valid {
 
         static ValidCommand defaultExecutor(String input, Chain chain) {
             return new ValidCommand(input, chain.mergedConditions(), chain.defaultExecutor, chain.collectArguments(),
-                    chain.mergedGlobalExecutors(), chain.extractSuggestionCallback(), chain.getArgs());
+                    chain.mergedGlobalExecutors(), chain.extractSuggestion(), chain.getArgs());
         }
 
         static ValidCommand executor(String input, Chain chain, CommandExecutor executor) {
             return new ValidCommand(input, chain.mergedConditions(), executor, chain.collectArguments(), chain.mergedGlobalExecutors(),
-                    chain.extractSuggestionCallback(), chain.getArgs());
+                    chain.extractSuggestion(), chain.getArgs());
         }
 
         @Override
@@ -324,7 +327,7 @@ final class CommandParserImpl implements CommandParser {
         static final ExecutableCommand.Result INVALID_SYNTAX = new ExecutionResultImpl(Type.INVALID_SYNTAX, null);
     }
 
-    private record NodeResult(Node node, ArgumentResult<Object> argumentResult, SuggestionCallback callback) {
+    private record NodeResult(Node node, ArgumentResult<Object> argumentResult, Arg.Suggestion.Type suggestionType) {
         public String name() {
             return node.argument().id();
         }

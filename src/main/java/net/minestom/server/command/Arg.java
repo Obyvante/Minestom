@@ -1,6 +1,7 @@
 package net.minestom.server.command;
 
 import net.kyori.adventure.text.Component;
+import net.minestom.server.command.builder.CommandContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
@@ -30,7 +31,7 @@ interface Arg<T> {
         interface Type {
             @NotNull String name();
 
-            @NotNull Entry suggest(@NotNull CommandSender sender, @NotNull String input);
+            @NotNull Entry suggest(@NotNull CommandSender sender, @NotNull CommandContext context);
 
             static @NotNull Type recipes() {
                 return ArgImpl.SuggestionTypeImpl.RECIPES;
@@ -69,7 +70,7 @@ interface Arg<T> {
 
         @FunctionalInterface
         interface Callback {
-            @NotNull Entry apply(@NotNull CommandSender sender, @NotNull String input);
+            @NotNull Entry apply(@NotNull CommandSender sender, @NotNull CommandContext context);
         }
     }
 }

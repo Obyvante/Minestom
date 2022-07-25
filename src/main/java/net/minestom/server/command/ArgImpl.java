@@ -1,6 +1,7 @@
 package net.minestom.server.command;
 
 import net.kyori.adventure.text.Component;
+import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.*;
 import net.minestom.server.command.builder.arguments.number.ArgumentDouble;
 import net.minestom.server.command.builder.arguments.number.ArgumentFloat;
@@ -39,11 +40,18 @@ record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType) i
             case ALL_RECIPES -> Suggestion.Type.recipes();
             case AVAILABLE_SOUNDS -> Suggestion.Type.sounds();
             case SUMMONABLE_ENTITIES -> Suggestion.Type.entities();
-            case ASK_SERVER -> Suggestion.Type.askServer((sender, input) -> {
+            case ASK_SERVER -> Suggestion.Type.askServer((sender, context) -> {
                 final SuggestionCallback suggestionCallback = argument.getSuggestionCallback();
                 assert suggestionCallback != null;
-                final var sug = new net.minestom.server.command.builder.suggestion.Suggestion(input, 0, 0);
-                suggestionCallback.apply(sender, null, sug);
+                final String input = context.getInput();
+
+                final int lastSpace = input.lastIndexOf(" ");
+
+                final int start = lastSpace + 2;
+                final int length = input.length() - lastSpace - 1;
+
+                final var sug = new net.minestom.server.command.builder.suggestion.Suggestion(input, start, length);
+                suggestionCallback.apply(sender, context, sug);
 
                 return new SuggestionEntryImpl(sug.getStart(), sug.getLength(),
                         sug.getEntries().stream().map(entry -> (Suggestion.Entry.Match) new MatchImpl(entry.getEntry(), entry.getTooltip())).toList());
@@ -60,14 +68,13 @@ record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType) i
             return new SuggestionTypeImpl("minecraft:ask_server", callback);
         }
 
-        @NotNull
         @Override
-        public Suggestion.Entry suggest(@NotNull CommandSender sender, @NotNull String input) {
+        public @NotNull Suggestion.Entry suggest(@NotNull CommandSender sender, @NotNull CommandContext context) {
             final Suggestion.Callback callback = this.callback;
             if (callback == null) {
                 throw new IllegalStateException("Suggestion type is not supported");
             }
-            return callback.apply(sender, input);
+            return callback.apply(sender, context);
         }
     }
 
