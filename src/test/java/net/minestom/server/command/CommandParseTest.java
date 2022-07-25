@@ -71,12 +71,11 @@ public class CommandParseTest {
     public void singleCommandOptionalArgs() {
         final AtomicBoolean b = new AtomicBoolean();
         final AtomicReference<String> expectedFirstArg = new AtomicReference<>("T");
-        // TODO fix default values
         var foo = Graph.merge(Graph.builder(literalArg("foo"))
-                .append(arg("a", String()),
-                        x -> x.append(arg("b", String()),
-                                x1 -> x1.append(arg("c", String()),
-                                        x2 -> x2.append(arg("d", String()),
+                .append(arg("a", String()).defaultValue("A"),
+                        x -> x.append(arg("b", String()).defaultValue("B"),
+                                x1 -> x1.append(arg("c", String()).defaultValue("C"),
+                                        x2 -> x2.append(arg("d", String()).defaultValue("D"),
                                                 new GraphImpl.ExecutionImpl(null, null, null,
                                                         (sender, context) -> {
                                                             b.set(true);

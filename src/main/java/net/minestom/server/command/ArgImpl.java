@@ -9,15 +9,19 @@ import net.minestom.server.command.builder.arguments.number.ArgumentInteger;
 import net.minestom.server.command.builder.arguments.number.ArgumentLong;
 import net.minestom.server.command.builder.suggestion.SuggestionCallback;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType) implements Arg<T> {
+record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType,
+                  Supplier<T> defaultValue) implements Arg<T> {
     static <T> ArgImpl<T> fromLegacy(Argument<T> argument) {
-        return new ArgImpl<>(argument.getId(), retrieveParser(argument), retrieveSuggestion(argument));
+        return new ArgImpl<>(argument.getId(), retrieveParser(argument),
+                retrieveSuggestion(argument), argument.getDefaultValue());
     }
 
     private static <T> Parser<T> retrieveParser(Argument<T> argument) {
@@ -57,6 +61,11 @@ record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType) i
                         sug.getEntries().stream().map(entry -> (Suggestion.Entry.Match) new MatchImpl(entry.getEntry(), entry.getTooltip())).toList());
             });
         };
+    }
+
+    @Override
+    public @NotNull Arg<T> defaultValue(@Nullable Supplier<@NotNull T> defaultValue) {
+        return new ArgImpl<>(id, parser, suggestionType, defaultValue);
     }
 
     record SuggestionTypeImpl(String name, Suggestion.Callback callback) implements Suggestion.Type {

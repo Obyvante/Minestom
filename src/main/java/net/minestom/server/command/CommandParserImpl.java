@@ -105,7 +105,7 @@ final class CommandParserImpl implements CommandParser {
             parent = null;
             for (Node child : tmp.next()) {
                 final Arg<?> argument = child.argument();
-                final Supplier<?> defaultSupplier = null;
+                final Supplier<?> defaultSupplier = argument.defaultValue();
                 if (defaultSupplier != null) {
                     final Object value = defaultSupplier.get();
                     final ArgumentResult<Object> argumentResult = new ArgumentResult.Success<>(value, "");

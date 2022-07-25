@@ -7,10 +7,11 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 interface Arg<T> {
     static <T> @NotNull Arg<T> arg(@NotNull String id, @NotNull Parser<T> parser, @Nullable Suggestion.Type suggestionType) {
-        return new ArgImpl<>(id, parser, suggestionType);
+        return new ArgImpl<>(id, parser, suggestionType, null);
     }
 
     static <T> @NotNull Arg<T> arg(@NotNull String id, @NotNull Parser<T> parser) {
@@ -26,6 +27,14 @@ interface Arg<T> {
     @NotNull Parser<T> parser();
 
     Suggestion.@UnknownNullability Type suggestionType();
+
+    @Nullable Supplier<@NotNull T> defaultValue();
+
+    @NotNull Arg<T> defaultValue(@Nullable Supplier<@NotNull T> defaultValue);
+
+    default @NotNull Arg<T> defaultValue(@NotNull T defaultValue) {
+        return defaultValue(() -> defaultValue);
+    }
 
     interface Suggestion {
         interface Type {
