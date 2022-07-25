@@ -306,6 +306,15 @@ public class ArgSpecTest {
         assertEquals(input.substring(0, expectedIndex), result.input(), "Invalid input(" + expectedIndex + ") for '" + input + "'");
         assertEquals(expectedValue, result.value(), "Invalid value");
         assertEquals(expectedIndex, result.index(), "Invalid index");
+
+        // Assert read with non-zero initial index
+        input = "1 " + input;
+        expectedIndex += 2;
+        final ParserSpec.Result<T> result2 = spec.read(input, 2);
+        assertNotNull(result2);
+        assertEquals(input.substring(2, expectedIndex), result2.input(), "Invalid input(" + expectedIndex + ") for '" + input + "'");
+        assertEquals(expectedValue, result2.value(), "Invalid value");
+        assertEquals(expectedIndex, result2.index(), "Invalid index");
     }
 
     static <T> void assertInvalidSpec(Parser<T> parser, String input) {

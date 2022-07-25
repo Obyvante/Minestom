@@ -10,12 +10,20 @@ import java.util.Set;
 
 final class ParserSpecTypes {
     static final ParserSpec.Type<Boolean> BOOLEAN = ParserSpecTypes.builder((input, startIndex) -> {
-                if (input.equals("true") || input.startsWith("true ", startIndex)) {
-                    return new ResultImpl<>("true", startIndex + 4, true);
-                } else if (input.equals("false") || input.startsWith("false ", startIndex)) {
-                    return new ResultImpl<>("false", startIndex + 5, false);
+                final int index = input.indexOf(' ', startIndex);
+                if (index == -1) {
+                    // Whole input is a float
+                    final String word = input.substring(startIndex);
+                    final Boolean value = word.equals("true") ? Boolean.TRUE : word.equals("false") ? Boolean.FALSE : null;
+                    if (value == null) return null;
+                    return new ResultImpl<>(word, input.length(), value);
+                } else {
+                    // Part of input is a float
+                    final String word = input.substring(startIndex, index);
+                    final Boolean value = word.equals("true") ? Boolean.TRUE : word.equals("false") ? Boolean.FALSE : null;
+                    if (value == null) return null;
+                    return new ResultImpl<>(word, index, value);
                 }
-                return null;
             })
             .build();
     static final ParserSpec.Type<Float> FLOAT = ParserSpecTypes.builder((input, startIndex) -> {
