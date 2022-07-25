@@ -378,7 +378,15 @@ final class CommandParserImpl implements CommandParser {
     private static <T> ArgumentResult<T> parse(Arg<T> argument, CommandStringReader reader) {
         final ParserSpec.Result<T> result = argument.parser().spec().read(reader.input, reader.cursor);
         if (result != null) {
-            reader.cursor(result.index());
+            int index = result.index();
+            assert index >= 0 && index <= reader.input.length() : "index out of bounds: " + index + " > " + reader.input.length() + " for " + reader.input;
+            assert index == reader.input.length() ||
+                    reader.input.charAt(index) == ' ' : "Invalid result index: " + index + " '" + reader.input.charAt(index) + "'" + " '" + reader.input + "'";
+            // Find next non-space index from input
+            while (index < reader.input.length() && Character.isWhitespace(reader.input.charAt(index))) {
+                index++;
+            }
+            reader.cursor(index);
             return new ArgumentResult.Success<>(result.value(), result.input());
         } else {
             return new ArgumentResult.IncompatibleType<>();

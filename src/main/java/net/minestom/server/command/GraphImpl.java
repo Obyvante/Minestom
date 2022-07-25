@@ -14,7 +14,6 @@ import java.util.function.Predicate;
 
 import static net.minestom.server.command.Arg.arg;
 import static net.minestom.server.command.Arg.literalArg;
-import static net.minestom.server.command.Parser.Literal;
 import static net.minestom.server.command.Parser.Literals;
 
 record GraphImpl(NodeImpl root) implements Graph {
@@ -161,9 +160,12 @@ record GraphImpl(NodeImpl root) implements Graph {
 
     static Arg<String> commandToArgument(Command command) {
         final String commandName = command.getName();
-        final String[] aliases = command.getNames();
-        final Parser<String> parser = aliases.length == 0 ? Literal(commandName) : Literals(command.getNames());
-        return arg(commandName, parser);
+        final String[] names = command.getNames();
+        if (names.length == 1) {
+            return literalArg(commandName);
+        } else {
+            return arg(commandName, Literals(names));
+        }
     }
 
     static boolean compare(@NotNull Node first, Node second, @NotNull Comparator comparator) {

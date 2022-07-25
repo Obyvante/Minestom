@@ -47,9 +47,6 @@ public class GraphConversionTest {
         enum A {A, B, C, D, E}
         final Command foo = new Command("foo");
 
-        var bar = Literal("bar");
-
-        var baz = Literal("baz");
         var a = ArgumentType.Enum("a", A.class);
 
         foo.addSyntax(GraphConversionTest::dummyExecutor,

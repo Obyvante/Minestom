@@ -5,6 +5,7 @@ import net.minestom.server.command.builder.arguments.ArgumentType;
 import org.junit.jupiter.api.Test;
 
 import static net.minestom.server.command.Arg.arg;
+import static net.minestom.server.command.Arg.literalArg;
 import static net.minestom.server.command.Parser.Boolean;
 import static net.minestom.server.command.Parser.Double;
 import static net.minestom.server.command.Parser.Float;
@@ -22,6 +23,12 @@ public class ArgTest {
         assertEquals("id", arg.id());
         assertEquals(Integer(), arg.parser());
         assertNull(arg.suggestionType());
+    }
+
+    @Test
+    public void equality() {
+        assertEquals(literalArg("test"), literalArg("test"));
+        assertEquals(arg("id", Integer()), arg("id", Integer()));
     }
 
     @Test

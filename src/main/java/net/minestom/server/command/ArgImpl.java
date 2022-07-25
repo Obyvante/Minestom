@@ -82,6 +82,7 @@ record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType) i
 
     static final class ConversionMap {
         private static final Map<Class<? extends Argument>, Function<Argument, Parser>> PARSERS = new ConversionMap()
+                .append(ArgumentLiteral.class, arg -> Parser.Literal(arg.getId()))
                 .append(ArgumentBoolean.class, arg -> Parser.Boolean())
                 .append(ArgumentFloat.class, arg -> Parser.Float().min(arg.getMin()).max(arg.getMax()))
                 .append(ArgumentDouble.class, arg -> Parser.Double().min(arg.getMin()).max(arg.getMax()))

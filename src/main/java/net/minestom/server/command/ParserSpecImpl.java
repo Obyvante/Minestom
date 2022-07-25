@@ -88,8 +88,9 @@ final class ParserSpecImpl {
                 // Single word argument
                 if (!argument.allowSpace()) {
                     final String word = split[0];
+                    final int index = startIndex + word.length();
                     final T value = argument.parse(word);
-                    return new ParserSpecTypes.ResultImpl<>(input, input.indexOf(word, startIndex), value);
+                    return new ParserSpecTypes.ResultImpl<>(input, index, value);
                 }
                 // Complete input argument
                 if (argument.useRemaining()) {
@@ -106,8 +107,10 @@ final class ParserSpecImpl {
                 if (!current.isEmpty()) current.append(' ');
                 current.append(word);
                 try {
-                    final T value = argument.parse(current.toString());
-                    return new ParserSpecTypes.ResultImpl<>(current.toString(), current.length(), value);
+                    final String result = current.toString();
+                    final T value = argument.parse(result);
+                    final int index = result.length();
+                    return new ParserSpecTypes.ResultImpl<>(result, index, value);
                 } catch (ArgumentSyntaxException ignored) {
                 }
             }

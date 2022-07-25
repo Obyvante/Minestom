@@ -152,7 +152,8 @@ final class ParserSpecTypes {
                 }
 
                 final String result = StringUtils.unescapeJavaString(input);
-                return new ResultImpl<>(tmp, startIndex + tmp.length(), result);
+                final int index = tmp.indexOf(result, startIndex) + result.length() + 1;
+                return new ResultImpl<>(input, index, result);
             })
             .build();
     static final ParserSpec.Type<String> GREEDY_PHRASE = ParserSpecTypes.builder((input, startIndex) -> {
