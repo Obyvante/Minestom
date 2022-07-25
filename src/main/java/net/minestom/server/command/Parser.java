@@ -1,5 +1,7 @@
 package net.minestom.server.command;
 
+import net.minestom.server.command.builder.arguments.Argument;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -45,6 +47,11 @@ sealed interface Parser<T> {
 
     static <T> @NotNull Custom<T> custom(@NotNull ParserSpec<T> spec) {
         return new ParserImpl.CustomImpl<>(spec);
+    }
+
+    @ApiStatus.Internal
+    static <T> @NotNull Custom<T> legacy(@NotNull Argument<T> argument) {
+        return custom(ParserSpec.legacy(argument));
     }
 
     @NotNull ParserSpec<T> spec();

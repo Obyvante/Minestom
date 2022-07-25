@@ -6,6 +6,14 @@ import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.network.packet.server.play.DeclareCommandsPacket;
 import org.junit.jupiter.api.Test;
 
+import java.lang.String;
+
+import static net.minestom.server.command.Arg.arg;
+import static net.minestom.server.command.Arg.literalArg;
+import static net.minestom.server.command.ArgImpl.fromLegacy;
+import static net.minestom.server.command.Parser.Integer;
+import static net.minestom.server.command.Parser.String;
+import static net.minestom.server.command.Parser.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -63,8 +71,8 @@ public class CommandPacketTest {
 
     @Test
     public void singleCommandTwoEnum() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Enum("bar", A.class), b -> b.append(ArgumentType.Enum("baz", B.class)))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(fromLegacy(ArgumentType.Enum("bar", A.class)), b -> b.append(fromLegacy(ArgumentType.Enum("baz", B.class))))
                 .build();
         assertPacketGraph("""
                 foo=%
@@ -77,8 +85,8 @@ public class CommandPacketTest {
 
     @Test
     public void singleCommandRestrictedWord() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Word("bar").from("A", "B", "C"))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(arg("bar", Literals("A", "B", "C")))
                 .build();
         assertPacketGraph("""
                 foo=%
@@ -90,8 +98,8 @@ public class CommandPacketTest {
 
     @Test
     public void singleCommandWord() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Word("bar"))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(arg("bar", String()))
                 .build();
         assertPacketGraph("""
                 foo=%
@@ -103,8 +111,8 @@ public class CommandPacketTest {
 
     @Test
     public void singleCommandCommandAfterEnum() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Enum("bar", A.class), b -> b.append(ArgumentType.Command("baz")))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(fromLegacy(ArgumentType.Enum("bar", A.class)), b -> b.append(fromLegacy(ArgumentType.Command("baz"))))
                 .build();
         assertPacketGraph("""
                 foo baz=%
@@ -118,11 +126,11 @@ public class CommandPacketTest {
 
     @Test
     public void twoCommandIntEnumInt() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Integer("int1"), b -> b.append(ArgumentType.Enum("test", A.class), c -> c.append(ArgumentType.Integer("int2"))))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(arg("int1", Integer()), b -> b.append(fromLegacy(ArgumentType.Enum("test", A.class)), c -> c.append(arg("int2", Integer()))))
                 .build();
-        var graph2 = Graph.builder(ArgumentType.Literal("bar"))
-                .append(ArgumentType.Integer("int3"), b -> b.append(ArgumentType.Enum("test", B.class), c -> c.append(ArgumentType.Integer("int4"))))
+        var graph2 = Graph.builder(literalArg("bar"))
+                .append(arg("int3", Integer()), b -> b.append(fromLegacy(ArgumentType.Enum("test", B.class)), c -> c.append(arg("int4", Integer()))))
                 .build();
         assertPacketGraph("""
                 foo bar=%
@@ -140,9 +148,9 @@ public class CommandPacketTest {
 
     @Test
     public void singleCommandTwoGroupOfIntInt() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Group("1", ArgumentType.Integer("int1"), ArgumentType.Integer("int2")),
-                        b -> b.append(ArgumentType.Group("2", ArgumentType.Integer("int3"), ArgumentType.Integer("int4"))))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(fromLegacy(ArgumentType.Group("1", ArgumentType.Integer("int1"), ArgumentType.Integer("int2"))),
+                        b -> b.append(fromLegacy(ArgumentType.Group("2", ArgumentType.Integer("int3"), ArgumentType.Integer("int4")))))
                 .build();
         assertPacketGraph("""
                 foo=%
@@ -154,12 +162,13 @@ public class CommandPacketTest {
                 int3->int4
                 """, graph);
     }
+
     @Test
     public void twoEnumAndOneLiteralChild() {
-        var graph = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.Enum("a", A.class))
-                .append(ArgumentType.Literal("l"))
-                .append(ArgumentType.Enum("b", B.class))
+        var graph = Graph.builder(literalArg("foo"))
+                .append(fromLegacy(ArgumentType.Enum("a", A.class)))
+                .append(literalArg("l"))
+                .append(fromLegacy(ArgumentType.Enum("b", B.class)))
                 .build();
         assertPacketGraph("""
                 foo l=%
@@ -171,7 +180,7 @@ public class CommandPacketTest {
 
     @Test
     public void commandAliasWithoutArg() {
-        var graph = Graph.builder(ArgumentType.Word("foo").from("foo", "bar"))
+        var graph = Graph.builder(arg("foo", Literals("foo", "bar")))
                 .build();
         assertPacketGraph("""
                 foo bar=%
@@ -181,8 +190,8 @@ public class CommandPacketTest {
 
     @Test
     public void commandAliasWithArg() {
-        var graph = Graph.builder(ArgumentType.Word("foo").from("foo", "bar"))
-                .append(ArgumentType.Literal("l"))
+        var graph = Graph.builder(arg("foo", Literals("foo", "bar")))
+                .append(literalArg("l"))
                 .build();
         assertPacketGraph("""
                 foo bar l=%
@@ -193,11 +202,11 @@ public class CommandPacketTest {
 
     @Test
     public void cmdArgShortcut() {
-        var foo = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.String("msg"))
+        var foo = Graph.builder(literalArg("foo"))
+                .append(arg("msg", String().type(StringParser.Type.QUOTED)))
                 .build();
-        var bar = Graph.builder(ArgumentType.Literal("bar"))
-                .append(ArgumentType.Command("cmd").setShortcut("foo"))
+        var bar = Graph.builder(literalArg("bar"))
+                .append(fromLegacy(ArgumentType.Command("cmd").setShortcut("foo")))
                 .build();
         assertPacketGraph("""
                 foo bar cmd=%
@@ -211,11 +220,11 @@ public class CommandPacketTest {
 
     @Test
     public void cmdArgShortcutWithPartialArg() {
-        var foo = Graph.builder(ArgumentType.Literal("foo"))
-                .append(ArgumentType.String("msg"))
+        var foo = Graph.builder(literalArg("foo"))
+                .append(arg("msg", String().type(StringParser.Type.QUOTED)))
                 .build();
-        var bar = Graph.builder(ArgumentType.Literal("bar"))
-                .append(ArgumentType.Command("cmd").setShortcut("foo \"prefix "))
+        var bar = Graph.builder(literalArg("bar"))
+                .append(fromLegacy(ArgumentType.Command("cmd").setShortcut("foo \"prefix ")))
                 .build();
         assertPacketGraph("""
                 foo bar cmd=%

@@ -16,6 +16,10 @@ interface Arg<T> {
         return arg(id, parser, null);
     }
 
+    static @NotNull Arg<String> literalArg(@NotNull String id) {
+        return arg(id, Parser.Literal(id), null);
+    }
+
     @NotNull String id();
 
     @NotNull Parser<T> parser();

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static net.minestom.server.command.builder.arguments.ArgumentType.Literal;
+import static net.minestom.server.command.Arg.literalArg;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GraphMergeTest {
@@ -14,31 +14,31 @@ public class GraphMergeTest {
     public void commands() {
         var foo = new Command("foo");
         var bar = new Command("bar");
-        var result = Graph.builder(Literal(""))
-                .append(Literal("foo"))
-                .append(Literal("bar"))
+        var result = Graph.builder(literalArg(""))
+                .append(literalArg("foo"))
+                .append(literalArg("bar"))
                 .build();
         assertEqualsGraph(result, Graph.merge(List.of(foo, bar)));
     }
 
     @Test
     public void empty() {
-        var graph1 = Graph.builder(Literal("foo")).build();
-        var graph2 = Graph.builder(Literal("bar")).build();
-        var result = Graph.builder(Literal(""))
-                .append(Literal("foo"))
-                .append(Literal("bar"))
+        var graph1 = Graph.builder(literalArg("foo")).build();
+        var graph2 = Graph.builder(literalArg("bar")).build();
+        var result = Graph.builder(literalArg(""))
+                .append(literalArg("foo"))
+                .append(literalArg("bar"))
                 .build();
         assertEqualsGraph(result, Graph.merge(graph1, graph2));
     }
 
     @Test
     public void literals() {
-        var graph1 = Graph.builder(Literal("foo")).append(Literal("1")).build();
-        var graph2 = Graph.builder(Literal("bar")).append(Literal("2")).build();
-        var result = Graph.builder(Literal(""))
-                .append(Literal("foo"), builder -> builder.append(Literal("1")))
-                .append(Literal("bar"), builder -> builder.append(Literal("2")))
+        var graph1 = Graph.builder(literalArg("foo")).append(literalArg("1")).build();
+        var graph2 = Graph.builder(literalArg("bar")).append(literalArg("2")).build();
+        var result = Graph.builder(literalArg(""))
+                .append(literalArg("foo"), builder -> builder.append(literalArg("1")))
+                .append(literalArg("bar"), builder -> builder.append(literalArg("2")))
                 .build();
         assertEqualsGraph(result, Graph.merge(graph1, graph2));
     }

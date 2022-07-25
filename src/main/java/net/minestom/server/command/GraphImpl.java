@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static net.minestom.server.command.Arg.arg;
+import static net.minestom.server.command.Arg.literalArg;
 import static net.minestom.server.command.Parser.Literal;
 import static net.minestom.server.command.Parser.Literals;
 
@@ -27,7 +28,7 @@ record GraphImpl(NodeImpl root) implements Graph {
 
     static GraphImpl merge(List<Graph> graphs) {
         final List<Node> children = graphs.stream().map(Graph::root).toList();
-        final NodeImpl root = new NodeImpl(arg("", Literal("")), null, children);
+        final NodeImpl root = new NodeImpl(literalArg(""), null, children);
         return new GraphImpl(root);
     }
 
@@ -154,7 +155,7 @@ record GraphImpl(NodeImpl root) implements Graph {
                 final ConversionNode conv = fromCommand(command);
                 next.put(conv.argument, conv);
             }
-            return new ConversionNode(arg("", Literal("")), null, next);
+            return new ConversionNode(literalArg(""), null, next);
         }
     }
 
