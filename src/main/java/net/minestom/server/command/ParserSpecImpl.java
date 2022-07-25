@@ -109,7 +109,7 @@ final class ParserSpecImpl {
                 try {
                     final String result = current.toString();
                     final T value = argument.parse(result);
-                    final int index = result.length();
+                    final int index = result.length() + startIndex;
                     return new ParserSpecTypes.ResultImpl<>(result, index, value);
                 } catch (ArgumentSyntaxException ignored) {
                 }
