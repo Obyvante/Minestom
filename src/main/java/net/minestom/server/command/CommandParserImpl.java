@@ -342,27 +342,6 @@ final class CommandParserImpl implements CommandParser {
             return cursor < input.length();
         }
 
-        String readWord() {
-            final String input = this.input;
-            final int cursor = this.cursor;
-
-            final int i = input.indexOf(' ', cursor);
-            if (i == -1) {
-                this.cursor = input.length() + 1;
-                return input.substring(cursor);
-            }
-            final String read = input.substring(cursor, i);
-            this.cursor += read.length() + 1;
-            return read;
-        }
-
-        String readRemaining() {
-            final String input = this.input;
-            final String result = input.substring(cursor);
-            this.cursor = input.length();
-            return result;
-        }
-
         int cursor() {
             return cursor;
         }
@@ -376,14 +355,15 @@ final class CommandParserImpl implements CommandParser {
     // ARGUMENT
 
     private static <T> ArgumentResult<T> parse(Arg<T> argument, CommandStringReader reader) {
-        final ParserSpec.Result<T> result = argument.parser().spec().read(reader.input, reader.cursor);
+        final String input = reader.input;
+        final ParserSpec.Result<T> result = argument.parser().spec().read(input, reader.cursor);
         if (result != null) {
             int index = result.index();
-            assert index >= 0 && index <= reader.input.length() : "index out of bounds: " + index + " > " + reader.input.length() + " for " + reader.input;
-            assert index == reader.input.length() ||
-                    reader.input.charAt(index) == ' ' : "Invalid result index: " + index + " '" + reader.input.charAt(index) + "'" + " '" + reader.input + "'";
+            assert index >= 0 && index <= input.length() : "index out of bounds: " + index + " > " + input.length() + " for " + input;
+            assert index == input.length() ||
+                    input.charAt(index) == ' ' : "Invalid result index: " + index + " '" + input.charAt(index) + "'" + " '" + input + "'";
             // Find next non-space index from input
-            while (index < reader.input.length() && Character.isWhitespace(reader.input.charAt(index))) {
+            while (index < input.length() && Character.isWhitespace(input.charAt(index))) {
                 index++;
             }
             reader.cursor(index);
