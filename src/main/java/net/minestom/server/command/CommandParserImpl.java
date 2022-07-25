@@ -5,7 +5,6 @@ import net.minestom.server.command.builder.ArgumentCallback;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.CommandData;
 import net.minestom.server.command.builder.CommandExecutor;
-import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.command.builder.condition.CommandCondition;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
 import net.minestom.server.command.builder.suggestion.Suggestion;
@@ -73,7 +72,7 @@ final class CommandParserImpl implements CommandParser {
                     .collect(Collectors.toUnmodifiableMap(NodeResult::name, NodeResult::argumentResult));
         }
 
-        List<Argument<?>> getArgs() {
+        List<Arg<?>> getArgs() {
             return nodeResults.stream().map(x -> x.node.argument()).collect(Collectors.toList());
         }
     }
@@ -89,7 +88,7 @@ final class CommandParserImpl implements CommandParser {
             chain.append(result);
             if (result.argumentResult instanceof ArgumentResult.SyntaxError<?> e) {
                 // Syntax error stop at this arg
-                final ArgumentCallback argumentCallback = parent.argument().getCallback();
+                final ArgumentCallback argumentCallback = null;
                 if (argumentCallback == null && chain.defaultExecutor != null) {
                     return ValidCommand.defaultExecutor(input, chain);
                 } else {
@@ -105,12 +104,12 @@ final class CommandParserImpl implements CommandParser {
             Node tmp = parent;
             parent = null;
             for (Node child : tmp.next()) {
-                final Argument<?> argument = child.argument();
-                final Supplier<?> defaultSupplier = argument.getDefaultValue();
+                final Arg<?> argument = child.argument();
+                final Supplier<?> defaultSupplier = null;
                 if (defaultSupplier != null) {
                     final Object value = defaultSupplier.get();
                     final ArgumentResult<Object> argumentResult = new ArgumentResult.Success<>(value, "");
-                    chain.append(new NodeResult(child, argumentResult, argument.getSuggestionCallback()));
+                    chain.append(new NodeResult(child, argumentResult, null));
                     parent = child;
                     break;
                 }
@@ -148,22 +147,22 @@ final class CommandParserImpl implements CommandParser {
     private static NodeResult parseChild(Node parent, CommandStringReader reader) {
         if (!reader.hasRemaining()) return null;
         for (Node child : parent.next()) {
-            final Argument<?> argument = child.argument();
+            final Arg<?> argument = child.argument();
             final int start = reader.cursor();
             final ArgumentResult<?> parse = parse(argument, reader);
             if (parse instanceof ArgumentResult.Success<?> success) {
                 return new NodeResult(child, (ArgumentResult<Object>) success,
-                        argument.getSuggestionCallback());
+                        null);
             } else if (parse instanceof ArgumentResult.SyntaxError<?> syntaxError) {
                 return new NodeResult(child, (ArgumentResult<Object>) syntaxError,
-                        argument.getSuggestionCallback());
+                        null);
             } else {
                 // Reset cursor & try next
                 reader.cursor(start);
             }
         }
         for (Node node : parent.next()) {
-            final SuggestionCallback suggestionCallback = node.argument().getSuggestionCallback();
+            final SuggestionCallback suggestionCallback = null;
             if (suggestionCallback != null) {
                 return new NodeResult(parent,
                         new ArgumentResult.SyntaxError<>("None of the arguments were compatible, but a suggestion callback was found.", "", -1),
@@ -187,7 +186,7 @@ final class CommandParserImpl implements CommandParser {
         }
 
         @Override
-        public List<Argument<?>> args() {
+        public List<Arg<?>> args() {
             return null;
         }
     }
@@ -218,7 +217,7 @@ final class CommandParserImpl implements CommandParser {
     record InvalidCommand(String input, CommandCondition condition, ArgumentCallback callback,
                           ArgumentResult.SyntaxError<?> error,
                           @NotNull Map<String, ArgumentResult<Object>> arguments, CommandExecutor globalListener,
-                          @Nullable SuggestionCallback suggestionCallback, List<Argument<?>> args)
+                          @Nullable SuggestionCallback suggestionCallback, List<Arg<?>> args)
             implements InternalKnownCommand, Result.KnownCommand.Invalid {
 
         static InvalidCommand invalid(String input, Chain chain) {
@@ -236,7 +235,8 @@ final class CommandParserImpl implements CommandParser {
 
     record ValidCommand(String input, CommandCondition condition, CommandExecutor executor,
                         @NotNull Map<String, ArgumentResult<Object>> arguments,
-                        CommandExecutor globalListener, @Nullable SuggestionCallback suggestionCallback, List<Argument<?>> args)
+                        CommandExecutor globalListener, @Nullable SuggestionCallback suggestionCallback,
+                        List<Arg<?>> args)
             implements InternalKnownCommand, Result.KnownCommand.Valid {
 
         static ValidCommand defaultExecutor(String input, Chain chain) {
@@ -326,7 +326,7 @@ final class CommandParserImpl implements CommandParser {
 
     private record NodeResult(Node node, ArgumentResult<Object> argumentResult, SuggestionCallback callback) {
         public String name() {
-            return node.argument().getId();
+            return node.argument().id();
         }
     }
 
@@ -375,36 +375,14 @@ final class CommandParserImpl implements CommandParser {
 
     // ARGUMENT
 
-    private static <T> ArgumentResult<T> parse(Argument<T> argument, CommandStringReader reader) {
-        // Handle specific type without loop
-        try {
-            // Single word argument
-            if (!argument.allowSpace()) {
-                final String word = reader.readWord();
-                return new ArgumentResult.Success<>(argument.parse(word), word);
-            }
-            // Complete input argument
-            if (argument.useRemaining()) {
-                final String remaining = reader.readRemaining();
-                return new ArgumentResult.Success<>(argument.parse(remaining), remaining);
-            }
-        } catch (ArgumentSyntaxException ignored) {
+    private static <T> ArgumentResult<T> parse(Arg<T> argument, CommandStringReader reader) {
+        final ParserSpec.Result<T> result = argument.parser().spec().read(reader.input, reader.cursor);
+        if (result != null) {
+            reader.cursor(result.index());
+            return new ArgumentResult.Success<>(result.value(), result.input());
+        } else {
             return new ArgumentResult.IncompatibleType<>();
         }
-        // Bruteforce
-        assert argument.allowSpace() && !argument.useRemaining();
-        StringBuilder current = new StringBuilder(reader.readWord());
-        while (true) {
-            try {
-                final String input = current.toString();
-                return new ArgumentResult.Success<>(argument.parse(input), input);
-            } catch (ArgumentSyntaxException ignored) {
-                if (!reader.hasRemaining()) break;
-                current.append(" ");
-                current.append(reader.readWord());
-            }
-        }
-        return new ArgumentResult.IncompatibleType<>();
     }
 
     private sealed interface ArgumentResult<R> {

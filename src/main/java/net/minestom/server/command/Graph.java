@@ -2,7 +2,6 @@ package net.minestom.server.command;
 
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandExecutor;
-import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.command.builder.condition.CommandCondition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,11 +13,11 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 sealed interface Graph permits GraphImpl {
-    static @NotNull Builder builder(@NotNull Argument<?> argument, @Nullable Execution execution) {
+    static @NotNull Builder builder(@NotNull Arg<?> argument, @Nullable Execution execution) {
         return new GraphImpl.BuilderImpl(argument, execution);
     }
 
-    static @NotNull Builder builder(@NotNull Argument<?> argument) {
+    static @NotNull Builder builder(@NotNull Arg<?> argument) {
         return new GraphImpl.BuilderImpl(argument, null);
     }
 
@@ -43,7 +42,7 @@ sealed interface Graph permits GraphImpl {
     boolean compare(@NotNull Graph graph, @NotNull Comparator comparator);
 
     sealed interface Node permits GraphImpl.NodeImpl {
-        @NotNull Argument<?> argument();
+        @NotNull Arg<?> argument();
 
         @UnknownNullability Execution execution();
 
@@ -69,15 +68,15 @@ sealed interface Graph permits GraphImpl {
     }
 
     sealed interface Builder permits GraphImpl.BuilderImpl {
-        @NotNull Builder append(@NotNull Argument<?> argument, @Nullable Execution execution, @NotNull Consumer<Builder> consumer);
+        @NotNull Builder append(@NotNull Arg<?> argument, @Nullable Execution execution, @NotNull Consumer<Builder> consumer);
 
-        @NotNull Builder append(@NotNull Argument<?> argument, @Nullable Execution execution);
+        @NotNull Builder append(@NotNull Arg<?> argument, @Nullable Execution execution);
 
-        default @NotNull Builder append(@NotNull Argument<?> argument, @NotNull Consumer<Builder> consumer) {
+        default @NotNull Builder append(@NotNull Arg<?> argument, @NotNull Consumer<Builder> consumer) {
             return append(argument, null, consumer);
         }
 
-        default @NotNull Builder append(@NotNull Argument<?> argument) {
+        default @NotNull Builder append(@NotNull Arg<?> argument) {
             return append(argument, (Execution) null);
         }
 

@@ -36,7 +36,7 @@ final class GraphConverter {
             if (!execution.test(player)) return new int[0];
         }
 
-        final Argument<?> argument = graphNode.argument();
+        final Arg<?> argument = graphNode.argument();
         final List<Graph.Node> children = graphNode.next();
 
         final DeclareCommandsPacket.Node node = new DeclareCommandsPacket.Node();
@@ -60,7 +60,7 @@ final class GraphConverter {
                 node.flags = 0; //root
             } else {
                 node.flags = literal(false, false);
-                node.name = argument.getId();
+                node.name = argument.id();
                 if (redirect != null) {
                     node.flags |= 0x8;
                     redirects.add((graph, root) -> node.redirectedNode = redirect.get());
@@ -71,14 +71,14 @@ final class GraphConverter {
         } else {
             if (argument instanceof ArgumentCommand argCmd) {
                 node.flags = literal(false, true);
-                node.name = argument.getId();
+                node.name = argument.id();
                 final String shortcut = argCmd.getShortcut();
                 if (shortcut.isEmpty()) {
                     redirects.add((graph, root) -> node.redirectedNode = root);
                 } else {
                     redirects.add((graph, root) -> {
-                        final List<Argument<?>> args = CommandParser.parser().parse(graph, shortcut).args();
-                        final Argument<?> last = args.get(args.size() - 1);
+                        final List<Arg<?>> args = CommandParser.parser().parse(graph, shortcut).args();
+                        final Arg<?> last = args.get(args.size() - 1);
                         if (last.allowSpace()) {
                             node.redirectedNode = argToPacketId.get(args.get(args.size()-2));
                         } else {

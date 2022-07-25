@@ -12,8 +12,9 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import static net.minestom.server.command.builder.arguments.ArgumentType.Literal;
-import static net.minestom.server.command.builder.arguments.ArgumentType.Word;
+import static net.minestom.server.command.Arg.arg;
+import static net.minestom.server.command.Parser.Literal;
+import static net.minestom.server.command.Parser.Literals;
 
 record GraphImpl(NodeImpl root) implements Graph {
     static GraphImpl fromCommand(Command command) {
@@ -26,7 +27,7 @@ record GraphImpl(NodeImpl root) implements Graph {
 
     static GraphImpl merge(List<Graph> graphs) {
         final List<Node> children = graphs.stream().map(Graph::root).toList();
-        final NodeImpl root = new NodeImpl(Literal(""), null, children);
+        final NodeImpl root = new NodeImpl(arg("", Literal("")), null, children);
         return new GraphImpl(root);
     }
 
@@ -35,13 +36,13 @@ record GraphImpl(NodeImpl root) implements Graph {
         return compare(root, graph.root(), comparator);
     }
 
-    record BuilderImpl(Argument<?> argument, List<BuilderImpl> children, Execution execution) implements Graph.Builder {
-        public BuilderImpl(Argument<?> argument, Execution execution) {
+    record BuilderImpl(Arg<?> argument, List<BuilderImpl> children, Execution execution) implements Graph.Builder {
+        public BuilderImpl(Arg<?> argument, Execution execution) {
             this(argument, new ArrayList<>(), execution);
         }
 
         @Override
-        public Graph.@NotNull Builder append(@NotNull Argument<?> argument, @Nullable Execution execution,
+        public Graph.@NotNull Builder append(@NotNull Arg<?> argument, @Nullable Execution execution,
                                              @NotNull Consumer<Graph.Builder> consumer) {
             BuilderImpl builder = new BuilderImpl(argument, execution);
             consumer.accept(builder);
@@ -50,7 +51,7 @@ record GraphImpl(NodeImpl root) implements Graph {
         }
 
         @Override
-        public Graph.@NotNull Builder append(@NotNull Argument<?> argument, @Nullable Execution execution) {
+        public Graph.@NotNull Builder append(@NotNull Arg<?> argument, @Nullable Execution execution) {
             this.children.add(new BuilderImpl(argument, List.of(), execution));
             return this;
         }
@@ -61,7 +62,7 @@ record GraphImpl(NodeImpl root) implements Graph {
         }
     }
 
-    record NodeImpl(Argument<?> argument, ExecutionImpl execution, List<Graph.Node> next) implements Graph.Node {
+    record NodeImpl(Arg<?> argument, ExecutionImpl execution, List<Graph.Node> next) implements Graph.Node {
         static NodeImpl fromBuilder(BuilderImpl builder) {
             final List<BuilderImpl> children = builder.children;
             Node[] nodes = new NodeImpl[children.size()];
@@ -113,9 +114,9 @@ record GraphImpl(NodeImpl root) implements Graph {
         }
     }
 
-    private record ConversionNode(Argument<?> argument, ExecutionImpl execution,
-                                  Map<Argument<?>, ConversionNode> nextMap) {
-        ConversionNode(Argument<?> argument, ExecutionImpl execution) {
+    private record ConversionNode(Arg<?> argument, ExecutionImpl execution,
+                                  Map<Arg<?>, ConversionNode> nextMap) {
+        ConversionNode(Arg<?> argument, ExecutionImpl execution) {
             this(argument, execution, new LinkedHashMap<>());
         }
 
@@ -133,7 +134,8 @@ record GraphImpl(NodeImpl root) implements Graph {
                 ConversionNode syntaxNode = root;
                 for (Argument<?> arg : syntax.getArguments()) {
                     boolean last = arg == syntax.getArguments()[syntax.getArguments().length - 1];
-                    syntaxNode = syntaxNode.nextMap.computeIfAbsent(arg, argument -> {
+                    final Arg<?> convertedArgument = ArgImpl.fromLegacy(arg);
+                    syntaxNode = syntaxNode.nextMap.computeIfAbsent(convertedArgument, argument -> {
                         var ex = last ? ExecutionImpl.fromSyntax(syntax) : null;
                         return new ConversionNode(argument, ex);
                     });
@@ -147,19 +149,20 @@ record GraphImpl(NodeImpl root) implements Graph {
         }
 
         static ConversionNode rootConv(Collection<Command> commands) {
-            Map<Argument<?>, ConversionNode> next = new LinkedHashMap<>(commands.size());
+            Map<Arg<?>, ConversionNode> next = new LinkedHashMap<>(commands.size());
             for (Command command : commands) {
                 final ConversionNode conv = fromCommand(command);
                 next.put(conv.argument, conv);
             }
-            return new ConversionNode(Literal(""), null, next);
+            return new ConversionNode(arg("", Literal("")), null, next);
         }
     }
 
-    static Argument<String> commandToArgument(Command command) {
+    static Arg<String> commandToArgument(Command command) {
+        final String commandName = command.getName();
         final String[] aliases = command.getNames();
-        if (aliases.length == 1) return Literal(aliases[0]);
-        return Word(command.getName()).from(command.getNames());
+        final Parser<String> parser = aliases.length == 0 ? Literal(commandName) : Literals(command.getNames());
+        return arg(commandName, parser);
     }
 
     static boolean compare(@NotNull Node first, Node second, @NotNull Comparator comparator) {
