@@ -78,6 +78,7 @@ public class ArgSpecTest {
         assertValidSpec(Boolean(), true, 4, "true");
         assertValidSpec(Boolean(), false, 5, "false");
         assertValidSpec(Boolean(), true, 4, "true test");
+        assertValidSpec(Boolean(), false, 5, "false test");
 
         assertInvalidSpec(Boolean(), "text");
         assertInvalidSpec(Boolean(), "text text");
@@ -227,6 +228,7 @@ public class ArgSpecTest {
 
         // Sequence parsing
         assertValidSpec(String(), "test", 4, "test");
+        assertValidSpec(String(), "test", 4, "test a");
         assertValidSpec(String().type(StringParser.Type.GREEDY), "test 1 2 3", 10, "test 1 2 3");
         assertValidSpec(String().type(StringParser.Type.QUOTED), "Hey there", 11, """
                 "Hey there"\
@@ -301,8 +303,9 @@ public class ArgSpecTest {
         final ParserSpec<T> spec = parser.spec();
         final ParserSpec.Result<T> result = spec.read(input);
         assertNotNull(result);
-        assertEquals(expectedValue, result.value());
-        assertEquals(expectedIndex, result.index());
+        assertEquals(input.substring(0, expectedIndex), result.input(), "Invalid input(" + expectedIndex + ") for '" + input + "'");
+        assertEquals(expectedValue, result.value(), "Invalid value");
+        assertEquals(expectedIndex, result.index(), "Invalid index");
     }
 
     static <T> void assertInvalidSpec(Parser<T> parser, String input) {

@@ -22,12 +22,14 @@ final class ParserSpecTypes {
                 final int index = input.indexOf(' ', startIndex);
                 if (index == -1) {
                     // Whole input is a float
-                    final float value = Float.parseFloat(input.substring(startIndex));
-                    return new ResultImpl<>(input, input.length(), value);
+                    final String word = input.substring(startIndex);
+                    final float value = Float.parseFloat(word);
+                    return new ResultImpl<>(word, input.length(), value);
                 } else {
                     // Part of input is a float
-                    final float value = Float.parseFloat(input.substring(startIndex, index));
-                    return new ResultImpl<>(input, index, value);
+                    final String word = input.substring(startIndex, index);
+                    final float value = Float.parseFloat(word);
+                    return new ResultImpl<>(word, index, value);
                 }
             })
             .build();
@@ -35,12 +37,15 @@ final class ParserSpecTypes {
                 final int index = input.indexOf(' ', startIndex);
                 if (index == -1) {
                     // Whole input is a double
-                    final double value = Double.parseDouble(input.substring(startIndex));
-                    return new ResultImpl<>(input, input.length(), value);
+                    final String word = input.substring(startIndex);
+                    final double value = Double.parseDouble(word);
+                    return new ResultImpl<>(word, input.length(), value);
                 } else {
                     // Part of input is a double
-                    final double value = Double.parseDouble(input.substring(startIndex, index));
-                    return new ResultImpl<>(input, index, value);
+                    final String word = input.substring(startIndex, index);
+                    final double value = Double.parseDouble(word);
+                    System.out.println("result: " + word + " : " + index + " : " + value);
+                    return new ResultImpl<>(word, index, value);
                 }
             })
             .build();
@@ -48,12 +53,14 @@ final class ParserSpecTypes {
                 final int index = input.indexOf(' ', startIndex);
                 if (index == -1) {
                     // Whole input is an integer
+                    final String word = input.substring(startIndex);
                     final int value = Integer.parseInt(input, startIndex, input.length(), 10);
-                    return new ResultImpl<>(input, input.length(), value);
+                    return new ResultImpl<>(word, input.length(), value);
                 } else {
                     // Part of input is an integer
+                    final String word = input.substring(startIndex, index);
                     final int value = Integer.parseInt(input, startIndex, index, 10);
-                    return new ResultImpl<>(input, index, value);
+                    return new ResultImpl<>(word, index, value);
                 }
             })
             .readExact(Integer::parseInt)
@@ -67,12 +74,14 @@ final class ParserSpecTypes {
                 final int index = input.indexOf(' ', startIndex);
                 if (index == -1) {
                     // Whole input is an integer
+                    final String word = input.substring(startIndex);
                     final long value = Long.parseLong(input, startIndex, input.length(), 10);
-                    return new ResultImpl<>(input, input.length(), value);
+                    return new ResultImpl<>(word, input.length(), value);
                 } else {
                     // Part of input is an integer
+                    final String word = input.substring(startIndex, index);
                     final long value = Long.parseLong(input, startIndex, index, 10);
-                    return new ResultImpl<>(input, index, value);
+                    return new ResultImpl<>(word, index, value);
                 }
             })
             .readExact(Long::parseLong)
@@ -86,16 +95,19 @@ final class ParserSpecTypes {
                 final int index = input.indexOf(' ', startIndex);
                 if (index == -1) {
                     // No space found, so it's a word
-                    return new ResultImpl<>(input, input.length(), input);
+                    final String word = input.substring(startIndex);
+                    return new ResultImpl<>(word, input.length(), word);
                 } else {
                     // Space found, substring the word
-                    return new ResultImpl<>(input, index, input.substring(startIndex, index));
+                    final String word = input.substring(startIndex, index);
+                    return new ResultImpl<>(word, index, word);
                 }
             })
             .equals((input, startIndex, constant) -> {
                 final int length = constant.length();
                 if (input.regionMatches(startIndex, constant, 0, length)) {
-                    return new ResultImpl<>(input, startIndex + length, constant);
+                    final int index = startIndex + length;
+                    return new ResultImpl<>(input.substring(startIndex, index), index, constant);
                 } else {
                     return null;
                 }
@@ -104,7 +116,9 @@ final class ParserSpecTypes {
                 for (String constant : constants) {
                     final int length = constant.length();
                     if (input.regionMatches(startIndex, constant, 0, length)) {
-                        return new ResultImpl<>(input, startIndex + length, constant);
+                        final int index = startIndex + length;
+                        final String word = input.substring(startIndex, index);
+                        return new ResultImpl<>(word, index, constant);
                     }
                 }
                 return null;
@@ -261,8 +275,11 @@ final class ParserSpecTypes {
             });
             readExact = Objects.requireNonNullElse(readExact, (input) -> {
                 final ParserSpec.Result<T> result = read(input, 0);
-                assertInput(result, input);
-                return result != null && input.length() == result.index() ? result.value() : null;
+                if (result != null && input.length() == result.index()) {
+                    assertInput(result, input);
+                    return result.value();
+                }
+                return null;
             });
             equalsExact = Objects.requireNonNullElse(equalsExact, (input, constant) -> {
                 final T value = readExact(input);
