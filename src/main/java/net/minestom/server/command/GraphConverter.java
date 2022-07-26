@@ -158,7 +158,7 @@ final class GraphConverter {
                     int[] res = null;
                     int[] last = new int[0];
                     for (int i = 0; i < entries.size(); i++) {
-                        Arg<?> entry = argFromLegacy(entries.get(i));
+                        Arg<?> entry = ArgImpl.fromLegacy(entries.get(i));
                         if (i == entries.size() - 1) {
                             // Last will be the parent of next args
                             final int[] l = append(new GraphImpl.NodeImpl(entry, null, List.of()), to, redirects,
@@ -190,7 +190,7 @@ final class GraphConverter {
                     int[] res = new int[special.arguments().size()];
                     List<? extends Argument<?>> arguments = special.arguments();
                     for (int i = 0, appendIndex = 0; i < arguments.size(); i++) {
-                        final int[] append = append(new GraphImpl.NodeImpl(argFromLegacy(arguments.get(i)), null, List.of()), to,
+                        final int[] append = append(new GraphImpl.NodeImpl(ArgImpl.fromLegacy(arguments.get(i)), null, List.of()), to,
                                 redirects, id, r, player, argToPacketId);
                         if (append.length == 1) {
                             res[appendIndex++] = append[0];
@@ -290,10 +290,6 @@ final class GraphConverter {
             if (s == null) throw new RuntimeException("Unsupported parser type: " + parserClass.getSimpleName());
             return s;
         }
-    }
-
-    private static Arg<?> argFromLegacy(Argument<?> argument) {
-        return Arg.arg(argument.getId(), Parser.legacy(argument));
     }
 
     private static Arg<?> findRedirectTargetForArgCmdShortcut(Graph graph, String shortcut) {
