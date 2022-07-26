@@ -142,7 +142,8 @@ final class CommandParserImpl implements CommandParser {
         if (!reader.hasRemaining()) return null;
         final List<Node> children = parent.next();
         for (Node child : children) {
-            final ArgumentResult<?> parse = parse(child.argument(), reader);
+            final ParserSpec<?> spec = child.argument().parser().spec();
+            final ArgumentResult<?> parse = parse(spec, reader);
             if (parse instanceof ArgumentResult.Success<?> success) {
                 return new NodeResult(child, (ArgumentResult<Object>) success,
                         null);
@@ -344,18 +345,14 @@ final class CommandParserImpl implements CommandParser {
 
     // ARGUMENT
 
-    private static <T> ArgumentResult<T> parse(Arg<T> argument, CommandStringReader reader) {
+    private static <T> ArgumentResult<T> parse(ParserSpec<T> spec, CommandStringReader reader) {
         final String input = reader.input;
-        final ParserSpec.Result<T> result = argument.parser().spec().read(input, reader.cursor);
+        final ParserSpec.Result<T> result = spec.read(input, reader.cursor);
         if (result != null) {
+            // Increment index by 1 to be at next word
             int index = result.index();
+            if (index < input.length()) index++;
             assert index >= 0 && index <= input.length() : "index out of bounds: " + index + " > " + input.length() + " for " + input;
-            assert index == input.length() ||
-                    input.charAt(index) == ' ' : "Invalid result index: " + index + " '" + input.charAt(index) + "'" + " '" + input + "'";
-            // Find next non-space index from input
-            while (index < input.length() && Character.isWhitespace(input.charAt(index))) {
-                index++;
-            }
             reader.cursor(index);
             return new ArgumentResult.Success<>(result.value(), result.input());
         } else {
