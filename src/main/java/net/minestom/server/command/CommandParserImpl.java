@@ -9,7 +9,6 @@ import net.minestom.server.command.builder.condition.CommandCondition;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
 import net.minestom.server.command.builder.suggestion.Suggestion;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -19,7 +18,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -119,7 +117,8 @@ final class CommandParserImpl implements CommandParser {
         final NodeResult lastNode = chain.nodeResults.peekLast();
         if (lastNode == null) return UnknownCommandResult.INSTANCE;
         // Verify syntax(s)
-        final CommandExecutor executor = nullSafeGetter(lastNode.node().execution(), Graph.Execution::executor);
+        final Graph.Execution execution = lastNode.node.execution();
+        final CommandExecutor executor = execution != null ? execution.executor() : null;
         if (executor == null) {
             // Syntax error
             if (chain.defaultExecutor != null) {
@@ -139,29 +138,21 @@ final class CommandParserImpl implements CommandParser {
         return ValidCommand.executor(input, chain, executor);
     }
 
-    @Contract("null, _ -> null; !null, null -> fail; !null, !null -> _")
-    private static <R, T> @Nullable R nullSafeGetter(@Nullable T obj, Function<T, R> getter) {
-        return obj == null ? null : getter.apply(obj);
-    }
-
     private static NodeResult parseChild(Node parent, CommandStringReader reader) {
         if (!reader.hasRemaining()) return null;
-        for (Node child : parent.next()) {
-            final Arg<?> argument = child.argument();
-            final int start = reader.cursor();
-            final ArgumentResult<?> parse = parse(argument, reader);
+        final List<Node> children = parent.next();
+        for (Node child : children) {
+            final ArgumentResult<?> parse = parse(child.argument(), reader);
             if (parse instanceof ArgumentResult.Success<?> success) {
                 return new NodeResult(child, (ArgumentResult<Object>) success,
                         null);
             } else if (parse instanceof ArgumentResult.SyntaxError<?> syntaxError) {
                 return new NodeResult(child, (ArgumentResult<Object>) syntaxError,
                         null);
-            } else {
-                // Reset cursor & try next
-                reader.cursor(start);
             }
         }
-        for (Node node : parent.next()) {
+        // No argument found, find syntax error from suggestion type
+        for (Node node : children) {
             final Arg.Suggestion.Type suggestionType = node.argument().suggestionType();
             if (suggestionType != null) {
                 return new NodeResult(parent,
@@ -343,10 +334,6 @@ final class CommandParserImpl implements CommandParser {
 
         boolean hasRemaining() {
             return cursor < input.length();
-        }
-
-        int cursor() {
-            return cursor;
         }
 
         void cursor(int cursor) {
