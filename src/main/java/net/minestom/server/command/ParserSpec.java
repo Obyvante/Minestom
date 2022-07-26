@@ -75,6 +75,11 @@ sealed interface ParserSpec<T>
 
         @NotNull String input();
 
+        /**
+         * Indicates how much data was read from the input
+         *
+         * @return the index of the next unread character
+         */
         int index();
 
         @NotNull T value();
