@@ -115,7 +115,7 @@ final class ParserSpecTypes {
                 final int length = constant.length();
                 if (input.regionMatches(startIndex, constant, 0, length)) {
                     final int index = startIndex + length;
-                    return new ResultImpl<>(input.substring(startIndex, index), index, constant);
+                    return new ResultImpl<>(constant, index, constant);
                 } else {
                     return null;
                 }
@@ -125,8 +125,7 @@ final class ParserSpecTypes {
                     final int length = constant.length();
                     if (input.regionMatches(startIndex, constant, 0, length)) {
                         final int index = startIndex + length;
-                        final String word = input.substring(startIndex, index);
-                        return new ResultImpl<>(word, index, constant);
+                        return new ResultImpl<>(constant, index, constant);
                     }
                 }
                 return null;
