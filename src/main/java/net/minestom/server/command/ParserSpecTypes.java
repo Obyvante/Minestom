@@ -1,5 +1,6 @@
 package net.minestom.server.command;
 
+import net.minestom.server.utils.StringReaderUtils;
 import net.minestom.server.utils.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -134,52 +135,27 @@ final class ParserSpecTypes {
             .findExact((input, constants) -> constants.contains(input) ? input : null)
             .build();
     static final ParserSpec.Type<String> QUOTED_PHRASE = ParserSpecTypes.builder((input, startIndex) -> {
-                final String tmp = input;
-                input = input.trim();
-                final char BACKSLASH = '\\';
-                final char DOUBLE_QUOTE = '"';
-                final char QUOTE = '\'';
-
-                input = input.substring(startIndex);
-
-                // Return if not quoted
-                if (!input.contains(String.valueOf(DOUBLE_QUOTE)) &&
-                        !input.contains(String.valueOf(QUOTE)) &&
-                        !input.contains(StringUtils.SPACE)) {
-                    return new ResultImpl<>(input, input.length(), input);
-                }
-
-                // Check if value start and end with quote
-                final char first = input.charAt(0);
-                final char last = input.charAt(input.length() - 1);
-                final boolean quote = input.length() >= 2 &&
-                        first == last && (first == DOUBLE_QUOTE || first == QUOTE);
-                if (!quote) {
-                    return null; // String argument needs to start and end with quotes
-                }
-
-                // Remove first and last characters (quotes)
-                input = input.substring(1, input.length() - 1);
-
-                // Verify backslashes
-                for (int i = 1; i < input.length(); i++) {
-                    final char c = input.charAt(i);
-                    if (c == first) {
-                        final char lastChar = input.charAt(i - 1);
-                        if (lastChar != BACKSLASH) {
-                            return null; // Non-escaped quote
-                        }
+                final int inclusiveEnd = StringReaderUtils.endIndexOfQuotableString(input, startIndex);
+                if (inclusiveEnd == -1) {
+                    return null;
+                } else {
+                    final char type = input.charAt(startIndex);
+                    final int exclusiveEnd = inclusiveEnd + 1;
+                    if (type == '"' || type == '\'') {
+                        // Quoted
+                        return ParserSpec.Result.of(input.substring(startIndex, exclusiveEnd), exclusiveEnd,
+                                StringUtils.unescapeJavaString(input.substring(startIndex+1, inclusiveEnd)));
+                    } else {
+                        // Unquoted
+                        final String substring = input.substring(startIndex, exclusiveEnd);
+                        return ParserSpec.Result.of(substring, exclusiveEnd, substring);
                     }
                 }
-
-                final String result = StringUtils.unescapeJavaString(input);
-                final int index = tmp.indexOf(result, startIndex) + result.length() + 1;
-                return new ResultImpl<>(input, index, result);
             })
             .build();
     static final ParserSpec.Type<String> GREEDY_PHRASE = ParserSpecTypes.builder((input, startIndex) -> {
                 final String result = input.substring(startIndex);
-                return new ResultImpl<>(input, input.length(), result);
+                return new ResultImpl<>(result, input.length(), result);
             })
             .build();
 
