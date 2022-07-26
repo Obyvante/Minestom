@@ -84,9 +84,10 @@ final class CommandParserImpl implements CommandParser {
         Node parent = graph.root();
         while ((result = parseChild(parent, reader)) != null) {
             chain.append(result);
+            final Node node = result.node;
             if (result.argumentResult instanceof ArgumentResult.SyntaxError<?> e) {
                 // Syntax error stop at this arg
-                final ArgumentCallback argumentCallback = null;
+                final ArgumentCallback argumentCallback = node.argument().callback();
                 if (argumentCallback == null && chain.defaultExecutor != null) {
                     return ValidCommand.defaultExecutor(input, chain);
                 } else {
@@ -95,7 +96,7 @@ final class CommandParserImpl implements CommandParser {
                             chain.extractSuggestion(), chain.getArgs());
                 }
             }
-            parent = result.node;
+            parent = node;
         }
         // Check children for arguments with default values
         do {

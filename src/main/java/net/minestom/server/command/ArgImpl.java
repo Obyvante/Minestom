@@ -1,6 +1,7 @@
 package net.minestom.server.command;
 
 import net.kyori.adventure.text.Component;
+import net.minestom.server.command.builder.ArgumentCallback;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.*;
 import net.minestom.server.command.builder.arguments.number.ArgumentDouble;
@@ -18,10 +19,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType,
-                  Supplier<T> defaultValue) implements Arg<T> {
+                  Supplier<T> defaultValue, ArgumentCallback callback) implements Arg<T> {
     static <T> ArgImpl<T> fromLegacy(Argument<T> argument) {
         return new ArgImpl<>(argument.getId(), retrieveParser(argument),
-                retrieveSuggestion(argument), argument.getDefaultValue());
+                retrieveSuggestion(argument), argument.getDefaultValue(), retrieveCallback(argument));
     }
 
     private static <T> Parser<T> retrieveParser(Argument<T> argument) {
@@ -63,9 +64,22 @@ record ArgImpl<T>(String id, Parser<T> parser, Suggestion.Type suggestionType,
         };
     }
 
+    private static ArgumentCallback retrieveCallback(Argument<?> argument) {
+        final ArgumentCallback callback = argument.getCallback();
+        if (callback == null) return null;
+        return (sender, context) -> {
+            callback.apply(sender, context);
+        };
+    }
+
     @Override
     public @NotNull Arg<T> defaultValue(@Nullable Supplier<@NotNull T> defaultValue) {
-        return new ArgImpl<>(id, parser, suggestionType, defaultValue);
+        return new ArgImpl<>(id, parser, suggestionType, defaultValue, callback);
+    }
+
+    @Override
+    public @NotNull Arg<T> callback(@Nullable ArgumentCallback callback) {
+        return new ArgImpl<>(id, parser, suggestionType, defaultValue, callback);
     }
 
     record SuggestionTypeImpl(String name, Suggestion.Callback callback) implements Suggestion.Type {

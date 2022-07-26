@@ -1,7 +1,9 @@
 package net.minestom.server.command;
 
 import net.kyori.adventure.text.Component;
+import net.minestom.server.command.builder.ArgumentCallback;
 import net.minestom.server.command.builder.CommandContext;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
@@ -11,7 +13,7 @@ import java.util.function.Supplier;
 
 interface Arg<T> {
     static <T> @NotNull Arg<T> arg(@NotNull String id, @NotNull Parser<T> parser, @Nullable Suggestion.Type suggestionType) {
-        return new ArgImpl<>(id, parser, suggestionType, null);
+        return new ArgImpl<>(id, parser, suggestionType, null, null);
     }
 
     static <T> @NotNull Arg<T> arg(@NotNull String id, @NotNull Parser<T> parser) {
@@ -35,6 +37,12 @@ interface Arg<T> {
     default @NotNull Arg<T> defaultValue(@NotNull T defaultValue) {
         return defaultValue(() -> defaultValue);
     }
+
+    @ApiStatus.Experimental
+    @Nullable ArgumentCallback callback();
+
+    @ApiStatus.Experimental
+    @NotNull Arg<T> callback(@Nullable ArgumentCallback callback);
 
     interface Suggestion {
         interface Type {
