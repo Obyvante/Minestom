@@ -98,12 +98,14 @@ final class ParserSpecImpl {
                     final T value = argument.parse(sub);
                     return success(input, input.length(), value);
                 }
-            } catch (ArgumentSyntaxException ignored) {
-                return incompatible();
+            } catch (ArgumentSyntaxException exception) {
+                return error(exception.getInput(), exception.getMessage(), exception.getErrorCode());
             }
             // Bruteforce
             assert argument.allowSpace() && !argument.useRemaining();
             StringBuilder current = new StringBuilder();
+
+            ArgumentSyntaxException lastException = null;
             for (String word : split) {
                 if (!current.isEmpty()) current.append(' ');
                 current.append(word);
@@ -112,8 +114,12 @@ final class ParserSpecImpl {
                     final T value = argument.parse(result);
                     final int index = result.length() + startIndex;
                     return success(result, index, value);
-                } catch (ArgumentSyntaxException ignored) {
+                } catch (ArgumentSyntaxException exception) {
+                    lastException = exception;
                 }
+            }
+            if (lastException != null) {
+                return error(lastException.getInput(), lastException.getMessage(), lastException.getErrorCode());
             }
             return incompatible();
         }
