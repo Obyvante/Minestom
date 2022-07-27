@@ -56,16 +56,10 @@ final class ParserSpecTypes {
     static final ParserSpec.Type<Integer> INTEGER = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
                 final String word = index == -1 ? input.substring(startIndex) : input.substring(startIndex, index);
+                final int resultIndex = index == -1 ? input.length() : index;
                 try {
-                    if (index == -1) {
-                        // Whole input is an integer
-                        final int value = Integer.parseInt(input, startIndex, input.length(), 10);
-                        return success(word, input.length(), value);
-                    } else {
-                        // Part of input is an integer
-                        final int value = Integer.parseInt(input, startIndex, index, 10);
-                        return success(word, index, value);
-                    }
+                    final int value = Integer.parseInt(input, startIndex, resultIndex, 10);
+                    return success(word, resultIndex, value);
                 } catch (NumberFormatException e) {
                     return incompatible();
                 }
@@ -74,16 +68,10 @@ final class ParserSpecTypes {
     static final ParserSpec.Type<Long> LONG = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
                 final String word = index == -1 ? input.substring(startIndex) : input.substring(startIndex, index);
+                final int resultIndex = index == -1 ? input.length() : index;
                 try {
-                    if (index == -1) {
-                        // Whole input is an integer
-                        final long value = Long.parseLong(input, startIndex, input.length(), 10);
-                        return success(word, input.length(), value);
-                    } else {
-                        // Part of input is an integer
-                        final long value = Long.parseLong(input, startIndex, index, 10);
-                        return success(word, index, value);
-                    }
+                    final long value = Long.parseLong(input, startIndex, resultIndex, 10);
+                    return success(word, resultIndex, value);
                 } catch (NumberFormatException e) {
                     return incompatible();
                 }
