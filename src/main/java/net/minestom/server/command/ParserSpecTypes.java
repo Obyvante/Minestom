@@ -9,8 +9,7 @@ import org.jetbrains.annotations.UnknownNullability;
 import java.util.Objects;
 import java.util.Set;
 
-import static net.minestom.server.command.ParserSpec.Result.error;
-import static net.minestom.server.command.ParserSpec.Result.success;
+import static net.minestom.server.command.ParserSpec.Result.*;
 
 final class ParserSpecTypes {
     static final ParserSpec.Type<Boolean> BOOLEAN = ParserSpecTypes.builder((input, startIndex) -> {
@@ -32,75 +31,62 @@ final class ParserSpecTypes {
             .build();
     static final ParserSpec.Type<Float> FLOAT = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
-                if (index == -1) {
-                    // Whole input is a float
-                    final String word = input.substring(startIndex);
+                final String word = index == -1 ? input.substring(startIndex) : input.substring(startIndex, index);
+                final int resultIndex = index == -1 ? input.length() : index;
+                try {
                     final float value = Float.parseFloat(word);
-                    return success(word, input.length(), value);
-                } else {
-                    // Part of input is a float
-                    final String word = input.substring(startIndex, index);
-                    final float value = Float.parseFloat(word);
-                    return success(word, index, value);
+                    return success(word, resultIndex, value);
+                } catch (NumberFormatException e) {
+                    return incompatible();
                 }
             })
             .build();
     static final ParserSpec.Type<Double> DOUBLE = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
-                if (index == -1) {
-                    // Whole input is a double
-                    final String word = input.substring(startIndex);
+                final String word = index == -1 ? input.substring(startIndex) : input.substring(startIndex, index);
+                final int resultIndex = index == -1 ? input.length() : index;
+                try {
                     final double value = Double.parseDouble(word);
-                    return success(word, input.length(), value);
-                } else {
-                    // Part of input is a double
-                    final String word = input.substring(startIndex, index);
-                    final double value = Double.parseDouble(word);
-                    System.out.println("result: " + word + " : " + index + " : " + value);
-                    return success(word, index, value);
+                    return success(word, resultIndex, value);
+                } catch (NumberFormatException e) {
+                    return incompatible();
                 }
             })
             .build();
     static final ParserSpec.Type<Integer> INTEGER = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
-                if (index == -1) {
-                    // Whole input is an integer
-                    final String word = input.substring(startIndex);
-                    final int value = Integer.parseInt(input, startIndex, input.length(), 10);
-                    return success(word, input.length(), value);
-                } else {
-                    // Part of input is an integer
-                    final String word = input.substring(startIndex, index);
-                    final int value = Integer.parseInt(input, startIndex, index, 10);
-                    return success(word, index, value);
+                final String word = index == -1 ? input.substring(startIndex) : input.substring(startIndex, index);
+                try {
+                    if (index == -1) {
+                        // Whole input is an integer
+                        final int value = Integer.parseInt(input, startIndex, input.length(), 10);
+                        return success(word, input.length(), value);
+                    } else {
+                        // Part of input is an integer
+                        final int value = Integer.parseInt(input, startIndex, index, 10);
+                        return success(word, index, value);
+                    }
+                } catch (NumberFormatException e) {
+                    return incompatible();
                 }
-            })
-            .readExact(Integer::parseInt)
-            .equalsExact((input, constant) -> Integer.parseInt(input) == constant ? constant : null)
-            .findExact((input, constants) -> {
-                final int value = Integer.parseInt(input);
-                return constants.contains(value) ? value : null;
             })
             .build();
     static final ParserSpec.Type<Long> LONG = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
-                if (index == -1) {
-                    // Whole input is an integer
-                    final String word = input.substring(startIndex);
-                    final long value = Long.parseLong(input, startIndex, input.length(), 10);
-                    return success(word, input.length(), value);
-                } else {
-                    // Part of input is an integer
-                    final String word = input.substring(startIndex, index);
-                    final long value = Long.parseLong(input, startIndex, index, 10);
-                    return success(word, index, value);
+                final String word = index == -1 ? input.substring(startIndex) : input.substring(startIndex, index);
+                try {
+                    if (index == -1) {
+                        // Whole input is an integer
+                        final long value = Long.parseLong(input, startIndex, input.length(), 10);
+                        return success(word, input.length(), value);
+                    } else {
+                        // Part of input is an integer
+                        final long value = Long.parseLong(input, startIndex, index, 10);
+                        return success(word, index, value);
+                    }
+                } catch (NumberFormatException e) {
+                    return incompatible();
                 }
-            })
-            .readExact(Long::parseLong)
-            .equalsExact((input, constant) -> Long.parseLong(input) == constant ? constant : null)
-            .findExact((input, constants) -> {
-                final long value = Long.parseLong(input);
-                return constants.contains(value) ? value : null;
             })
             .build();
     static final ParserSpec.Type<String> WORD = ParserSpecTypes.builder((input, startIndex) -> {
@@ -285,56 +271,32 @@ final class ParserSpecTypes {
 
         @Override
         public ParserSpec.@NotNull Result<T> read(@NotNull String input, int startIndex) {
-            try {
-                return read.read(input, startIndex);
-            } catch (Exception e) {
-                return null;
-            }
+            return read.read(input, startIndex);
         }
 
         @Override
         public ParserSpec.@NotNull Result<T> equals(@NotNull String input, int startIndex, @NotNull T constant) {
-            try {
-                return equals.equals(input, startIndex, constant);
-            } catch (Exception e) {
-                return null;
-            }
+            return equals.equals(input, startIndex, constant);
         }
 
         @Override
         public ParserSpec.@NotNull Result<T> find(@NotNull String input, int startIndex, @NotNull Set<@NotNull T> constants) {
-            try {
-                return find.find(input, startIndex, constants);
-            } catch (Exception e) {
-                return null;
-            }
+            return find.find(input, startIndex, constants);
         }
 
         @Override
         public @Nullable T readExact(@NotNull String input) {
-            try {
-                return readExact.readExact(input);
-            } catch (Exception e) {
-                return null;
-            }
+            return readExact.readExact(input);
         }
 
         @Override
         public @Nullable T equalsExact(@NotNull String input, @NotNull T constant) {
-            try {
-                return equalsExact.equalsExact(input, constant);
-            } catch (Exception e) {
-                return null;
-            }
+            return equalsExact.equalsExact(input, constant);
         }
 
         @Override
         public @Nullable T findExact(@NotNull String input, @NotNull Set<@NotNull T> constants) {
-            try {
-                return findExact.findExact(input, constants);
-            } catch (Exception e) {
-                return null;
-            }
+            return findExact.findExact(input, constants);
         }
     }
 
