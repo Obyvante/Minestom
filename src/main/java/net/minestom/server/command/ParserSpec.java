@@ -34,16 +34,16 @@ sealed interface ParserSpec<T>
         return new ParserSpecImpl.Legacy<>(argument);
     }
 
-    @Nullable Result<T> read(@NotNull String input, int startIndex);
+    @NotNull Result<T> read(@NotNull String input, int startIndex);
 
-    default @Nullable Result<T> read(@NotNull String input) {
+    default @NotNull Result<T> read(@NotNull String input) {
         return read(input, 0);
     }
 
     default @Nullable T readExact(@NotNull String input) {
         final Result<T> result = read(input);
-        return result != null && result.index() == input.length() ?
-                result.value() : null;
+        return result instanceof Result.Success<T> success && success.index() == input.length() ?
+                success.value() : null;
     }
 
     sealed interface Type<T> extends ParserSpec<T>
@@ -58,30 +58,56 @@ sealed interface ParserSpec<T>
         Type<String> QUOTED_PHRASE = ParserSpecTypes.QUOTED_PHRASE;
         Type<String> GREEDY_PHRASE = ParserSpecTypes.GREEDY_PHRASE;
 
-        @Nullable ParserSpec.Result<T> equals(@NotNull String input, int startIndex, @NotNull T constant);
+        @NotNull ParserSpec.Result<T> equals(@NotNull String input, int startIndex, @NotNull T constant);
 
-        @Nullable ParserSpec.Result<T> find(@NotNull String input, int startIndex, @NotNull Set<@NotNull T> constants);
+        @NotNull ParserSpec.Result<T> find(@NotNull String input, int startIndex, @NotNull Set<@NotNull T> constants);
 
         @Nullable T equalsExact(@NotNull String input, @NotNull T constant);
 
         @Nullable T findExact(@NotNull String input, @NotNull Set<@NotNull T> constants);
     }
 
-    sealed interface Result<T>
-            permits ParserSpecTypes.ResultImpl {
-        static <T> @NotNull Result<T> of(@NotNull String input, int index, @NotNull T value) {
-            return new ParserSpecTypes.ResultImpl<>(input, index, value);
+
+    sealed interface Result<T> {
+        static <T> Result.@NotNull Success<T> success(@NotNull String input, int index, @NotNull T value) {
+            return new ParserSpecTypes.ResultSuccessImpl<>(input, index, value);
         }
 
-        @NotNull String input();
+        static <T> Result.@NotNull SyntaxError<T> error(@NotNull String input, @NotNull String message, int error) {
+            return new ParserSpecTypes.ResultErrorImpl<>(input, message, error);
+        }
 
-        /**
-         * Indicates how much data was read from the input
-         *
-         * @return the index of the next unread character
-         */
-        int index();
+        static <T> Result.@NotNull IncompatibleType<T> incompatible() {
+            return new ParserSpecTypes.ResultIncompatibleImpl<>();
+        }
 
-        @NotNull T value();
+        sealed interface Success<T> extends Result<T>
+                permits ParserSpecTypes.ResultSuccessImpl {
+
+            @NotNull String input();
+
+            /**
+             * Indicates how much data was read from the input
+             *
+             * @return the index of the next unread character
+             */
+            int index();
+
+            @NotNull T value();
+        }
+
+        sealed interface IncompatibleType<T> extends Result<T>
+                permits ParserSpecTypes.ResultIncompatibleImpl {
+        }
+
+        sealed interface SyntaxError<T> extends Result<T>
+                permits ParserSpecTypes.ResultErrorImpl {
+
+            @NotNull String input();
+
+            @NotNull String message();
+
+            int error();
+        }
     }
 }

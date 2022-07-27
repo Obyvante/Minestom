@@ -64,7 +64,7 @@ final class CommandParserImpl implements CommandParser {
             return nodeResults.peekLast().suggestionType;
         }
 
-        Map<String, ArgumentResult<Object>> collectArguments() {
+        Map<String, ParserSpec.Result<Object>> collectArguments() {
             return nodeResults.stream()
                     .skip(1) // skip root
                     .collect(Collectors.toUnmodifiableMap(NodeResult::name, NodeResult::argumentResult));
@@ -85,7 +85,7 @@ final class CommandParserImpl implements CommandParser {
         while ((result = parseChild(parent, reader)) != null) {
             chain.append(result);
             final Node node = result.node;
-            if (result.argumentResult instanceof ArgumentResult.SyntaxError<?> e) {
+            if (result.argumentResult instanceof ParserSpec.Result.SyntaxError<?> e) {
                 // Syntax error stop at this arg
                 final ArgumentCallback argumentCallback = node.argument().callback();
                 if (argumentCallback == null && chain.defaultExecutor != null) {
@@ -107,7 +107,7 @@ final class CommandParserImpl implements CommandParser {
                 final Supplier<?> defaultSupplier = argument.defaultValue();
                 if (defaultSupplier != null) {
                     final Object value = defaultSupplier.get();
-                    final ArgumentResult<Object> argumentResult = new ArgumentResult.Success<>(value, "");
+                    final ParserSpec.Result<Object> argumentResult = ParserSpec.Result.success("", -1, value);
                     chain.append(new NodeResult(child, argumentResult, null));
                     parent = child;
                     break;
@@ -144,12 +144,12 @@ final class CommandParserImpl implements CommandParser {
         final List<Node> children = parent.next();
         for (Node child : children) {
             final ParserSpec<?> spec = child.argument().parser().spec();
-            final ArgumentResult<?> parse = parse(spec, reader);
-            if (parse instanceof ArgumentResult.Success<?> success) {
-                return new NodeResult(child, (ArgumentResult<Object>) success,
+            final ParserSpec.Result<?> parse = parse(spec, reader);
+            if (parse instanceof ParserSpec.Result.Success<?> success) {
+                return new NodeResult(child, (ParserSpec.Result<Object>) success,
                         null);
-            } else if (parse instanceof ArgumentResult.SyntaxError<?> syntaxError) {
-                return new NodeResult(child, (ArgumentResult<Object>) syntaxError,
+            } else if (parse instanceof ParserSpec.Result.SyntaxError<?> syntaxError) {
+                return new NodeResult(child, (ParserSpec.Result<Object>) syntaxError,
                         null);
             }
         }
@@ -158,7 +158,7 @@ final class CommandParserImpl implements CommandParser {
             final Arg.Suggestion.Type suggestionType = node.argument().suggestionType();
             if (suggestionType != null) {
                 return new NodeResult(parent,
-                        new ArgumentResult.SyntaxError<>("None of the arguments were compatible, but a suggestion callback was found.", "", -1),
+                        ParserSpec.Result.error("", "None of the arguments were compatible, but a suggestion callback was found.", -1),
                         suggestionType);
             }
         }
@@ -189,7 +189,7 @@ final class CommandParserImpl implements CommandParser {
 
         @Nullable CommandCondition condition();
 
-        @NotNull Map<String, ArgumentResult<Object>> arguments();
+        @NotNull Map<String, ParserSpec.Result<Object>> arguments();
 
         CommandExecutor globalListener();
 
@@ -211,15 +211,15 @@ final class CommandParserImpl implements CommandParser {
     }
 
     record InvalidCommand(String input, CommandCondition condition, ArgumentCallback callback,
-                          ArgumentResult.SyntaxError<?> error,
-                          @NotNull Map<String, ArgumentResult<Object>> arguments, CommandExecutor globalListener,
+                          ParserSpec.Result.SyntaxError<?> error,
+                          @NotNull Map<String, ParserSpec.Result<Object>> arguments, CommandExecutor globalListener,
                           @Nullable Arg.Suggestion.Type suggestionType, List<Arg<?>> args)
             implements InternalKnownCommand, Result.KnownCommand.Invalid {
 
         static InvalidCommand invalid(String input, Chain chain) {
             return new InvalidCommand(input, chain.mergedConditions(),
                     null/*todo command syntax callback*/,
-                    new ArgumentResult.SyntaxError<>("Command has trailing data.", null, -1),
+                    ParserSpec.Result.error("", "Command has trailing data.", -1),
                     chain.collectArguments(), chain.mergedGlobalExecutors(), chain.extractSuggestion(), chain.getArgs());
         }
 
@@ -230,7 +230,7 @@ final class CommandParserImpl implements CommandParser {
     }
 
     record ValidCommand(String input, CommandCondition condition, CommandExecutor executor,
-                        @NotNull Map<String, ArgumentResult<Object>> arguments,
+                        @NotNull Map<String, ParserSpec.Result<Object>> arguments,
                         CommandExecutor globalListener, @Nullable Arg.Suggestion.Type suggestionType,
                         List<Arg<?>> args)
             implements InternalKnownCommand, Result.KnownCommand.Valid {
@@ -262,7 +262,7 @@ final class CommandParserImpl implements CommandParser {
 
     record ValidExecutableCmd(CommandCondition condition, CommandExecutor globalListener, CommandExecutor executor,
                               String input,
-                              Map<String, ArgumentResult<Object>> arguments) implements ExecutableCommand {
+                              Map<String, ParserSpec.Result<Object>> arguments) implements ExecutableCommand {
         @Override
         public @NotNull Result execute(@NotNull CommandSender sender) {
             final CommandContext context = createCommandContext(input, arguments);
@@ -283,8 +283,8 @@ final class CommandParserImpl implements CommandParser {
     }
 
     record InvalidExecutableCmd(CommandCondition condition, CommandExecutor globalListener, ArgumentCallback callback,
-                                ArgumentResult.SyntaxError<?> error, String input,
-                                Map<String, ArgumentResult<Object>> arguments) implements ExecutableCommand {
+                                ParserSpec.Result.SyntaxError<?> error, String input,
+                                Map<String, ParserSpec.Result<Object>> arguments) implements ExecutableCommand {
         @Override
         public @NotNull Result execute(@NotNull CommandSender sender) {
             globalListener().apply(sender, createCommandContext(input, arguments));
@@ -293,19 +293,19 @@ final class CommandParserImpl implements CommandParser {
                 return ExecutionResultImpl.PRECONDITION_FAILED;
             }
             if (callback != null)
-                callback.apply(sender, new ArgumentSyntaxException(error.message(), error.input(), error.code()));
+                callback.apply(sender, new ArgumentSyntaxException(error.message(), error.input(), error.error()));
             return ExecutionResultImpl.INVALID_SYNTAX;
         }
     }
 
-    private static CommandContext createCommandContext(String input, Map<String, ArgumentResult<Object>> arguments) {
+    private static CommandContext createCommandContext(String input, Map<String, ParserSpec.Result<Object>> arguments) {
         final CommandContext context = new CommandContext(input);
         for (var entry : arguments.entrySet()) {
             final String identifier = entry.getKey();
-            final ArgumentResult<Object> value = entry.getValue();
+            final ParserSpec.Result<Object> value = entry.getValue();
 
-            final Object argOutput = value instanceof ArgumentResult.Success<Object> success ? success.value() : null;
-            final String argInput = value instanceof ArgumentResult.Success<Object> success ? success.input() : "";
+            final Object argOutput = value instanceof ParserSpec.Result.Success<Object> success ? success.value() : null;
+            final String argInput = value instanceof ParserSpec.Result.Success<Object> success ? success.input() : "";
 
             context.setArg(identifier, argOutput, argInput);
         }
@@ -320,7 +320,7 @@ final class CommandParserImpl implements CommandParser {
         static final ExecutableCommand.Result INVALID_SYNTAX = new ExecutionResultImpl(Type.INVALID_SYNTAX, null);
     }
 
-    private record NodeResult(Node node, ArgumentResult<Object> argumentResult, Arg.Suggestion.Type suggestionType) {
+    private record NodeResult(Node node, ParserSpec.Result<Object> argumentResult, Arg.Suggestion.Type suggestionType) {
         public String name() {
             return node.argument().id();
         }
@@ -346,32 +346,16 @@ final class CommandParserImpl implements CommandParser {
 
     // ARGUMENT
 
-    private static <T> ArgumentResult<T> parse(ParserSpec<T> spec, CommandStringReader reader) {
+    private static <T> ParserSpec.Result<T> parse(ParserSpec<T> spec, CommandStringReader reader) {
         final String input = reader.input;
         final ParserSpec.Result<T> result = spec.read(input, reader.cursor);
-        if (result != null) {
+        if (result instanceof ParserSpec.Result.Success<T> success) {
             // Increment index by 1 to be at next word
-            int index = result.index();
+            int index = success.index();
             if (index < input.length()) index++;
             assert index >= 0 && index <= input.length() : "index out of bounds: " + index + " > " + input.length() + " for " + input;
             reader.cursor(index);
-            return new ArgumentResult.Success<>(result.value(), result.input());
-        } else {
-            return new ArgumentResult.IncompatibleType<>();
         }
-    }
-
-    private sealed interface ArgumentResult<R> {
-        record Success<T>(T value, String input)
-                implements ArgumentResult<T> {
-        }
-
-        record IncompatibleType<T>()
-                implements ArgumentResult<T> {
-        }
-
-        record SyntaxError<T>(String message, String input, int code)
-                implements ArgumentResult<T> {
-        }
+        return result;
     }
 }

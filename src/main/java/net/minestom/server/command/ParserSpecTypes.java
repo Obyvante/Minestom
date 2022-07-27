@@ -9,6 +9,9 @@ import org.jetbrains.annotations.UnknownNullability;
 import java.util.Objects;
 import java.util.Set;
 
+import static net.minestom.server.command.ParserSpec.Result.error;
+import static net.minestom.server.command.ParserSpec.Result.success;
+
 final class ParserSpecTypes {
     static final ParserSpec.Type<Boolean> BOOLEAN = ParserSpecTypes.builder((input, startIndex) -> {
                 final int index = input.indexOf(' ', startIndex);
@@ -17,13 +20,13 @@ final class ParserSpecTypes {
                     final String word = input.substring(startIndex);
                     final Boolean value = word.equals("true") ? Boolean.TRUE : word.equals("false") ? Boolean.FALSE : null;
                     if (value == null) return null;
-                    return new ResultImpl<>(word, input.length(), value);
+                    return success(word, input.length(), value);
                 } else {
                     // Part of input is a float
                     final String word = input.substring(startIndex, index);
                     final Boolean value = word.equals("true") ? Boolean.TRUE : word.equals("false") ? Boolean.FALSE : null;
                     if (value == null) return null;
-                    return new ResultImpl<>(word, index, value);
+                    return success(word, index, value);
                 }
             })
             .build();
@@ -33,12 +36,12 @@ final class ParserSpecTypes {
                     // Whole input is a float
                     final String word = input.substring(startIndex);
                     final float value = Float.parseFloat(word);
-                    return new ResultImpl<>(word, input.length(), value);
+                    return success(word, input.length(), value);
                 } else {
                     // Part of input is a float
                     final String word = input.substring(startIndex, index);
                     final float value = Float.parseFloat(word);
-                    return new ResultImpl<>(word, index, value);
+                    return success(word, index, value);
                 }
             })
             .build();
@@ -48,13 +51,13 @@ final class ParserSpecTypes {
                     // Whole input is a double
                     final String word = input.substring(startIndex);
                     final double value = Double.parseDouble(word);
-                    return new ResultImpl<>(word, input.length(), value);
+                    return success(word, input.length(), value);
                 } else {
                     // Part of input is a double
                     final String word = input.substring(startIndex, index);
                     final double value = Double.parseDouble(word);
                     System.out.println("result: " + word + " : " + index + " : " + value);
-                    return new ResultImpl<>(word, index, value);
+                    return success(word, index, value);
                 }
             })
             .build();
@@ -64,12 +67,12 @@ final class ParserSpecTypes {
                     // Whole input is an integer
                     final String word = input.substring(startIndex);
                     final int value = Integer.parseInt(input, startIndex, input.length(), 10);
-                    return new ResultImpl<>(word, input.length(), value);
+                    return success(word, input.length(), value);
                 } else {
                     // Part of input is an integer
                     final String word = input.substring(startIndex, index);
                     final int value = Integer.parseInt(input, startIndex, index, 10);
-                    return new ResultImpl<>(word, index, value);
+                    return success(word, index, value);
                 }
             })
             .readExact(Integer::parseInt)
@@ -85,12 +88,12 @@ final class ParserSpecTypes {
                     // Whole input is an integer
                     final String word = input.substring(startIndex);
                     final long value = Long.parseLong(input, startIndex, input.length(), 10);
-                    return new ResultImpl<>(word, input.length(), value);
+                    return success(word, input.length(), value);
                 } else {
                     // Part of input is an integer
                     final String word = input.substring(startIndex, index);
                     final long value = Long.parseLong(input, startIndex, index, 10);
-                    return new ResultImpl<>(word, index, value);
+                    return success(word, index, value);
                 }
             })
             .readExact(Long::parseLong)
@@ -105,18 +108,18 @@ final class ParserSpecTypes {
                 if (index == -1) {
                     // No space found, so it's a word
                     final String word = input.substring(startIndex);
-                    return new ResultImpl<>(word, input.length(), word);
+                    return success(word, input.length(), word);
                 } else {
                     // Space found, substring the word
                     final String word = input.substring(startIndex, index);
-                    return new ResultImpl<>(word, index, word);
+                    return success(word, index, word);
                 }
             })
             .equals((input, startIndex, constant) -> {
                 final int length = constant.length();
                 if (input.regionMatches(startIndex, constant, 0, length)) {
                     final int index = startIndex + length;
-                    return new ResultImpl<>(constant, index, constant);
+                    return success(constant, index, constant);
                 } else {
                     return null;
                 }
@@ -126,7 +129,7 @@ final class ParserSpecTypes {
                     final int length = constant.length();
                     if (input.regionMatches(startIndex, constant, 0, length)) {
                         final int index = startIndex + length;
-                        return new ResultImpl<>(constant, index, constant);
+                        return success(constant, index, constant);
                     }
                 }
                 return null;
@@ -143,19 +146,19 @@ final class ParserSpecTypes {
                     final int exclusiveEnd = inclusiveEnd + 1;
                     if (type == '"' || type == '\'') {
                         // Quoted
-                        return ParserSpec.Result.of(input.substring(startIndex, exclusiveEnd), exclusiveEnd,
-                                StringUtils.unescapeJavaString(input.substring(startIndex+1, inclusiveEnd)));
+                        return success(input.substring(startIndex, exclusiveEnd), exclusiveEnd,
+                                StringUtils.unescapeJavaString(input.substring(startIndex + 1, inclusiveEnd)));
                     } else {
                         // Unquoted
                         final String substring = input.substring(startIndex, exclusiveEnd);
-                        return ParserSpec.Result.of(substring, exclusiveEnd, substring);
+                        return success(substring, exclusiveEnd, substring);
                     }
                 }
             })
             .build();
     static final ParserSpec.Type<String> GREEDY_PHRASE = ParserSpecTypes.builder((input, startIndex) -> {
                 final String result = input.substring(startIndex);
-                return new ResultImpl<>(result, input.length(), result);
+                return success(result, input.length(), result);
             })
             .build();
 
@@ -249,18 +252,24 @@ final class ParserSpecTypes {
             equals = Objects.requireNonNullElse(equals, (input, startIndex, constant) -> {
                 final ParserSpec.Result<T> result = read(input, startIndex);
                 assertInput(result, input);
-                return result != null && constant.equals(result.value()) ? result : null;
+                if (result instanceof Result.Success<T> success && !constant.equals(success.value())) {
+                    return error(success.input(), "Expected constant '" + constant + "' but found '" + success.value() + "'", 0);
+                }
+                return result;
             });
             find = Objects.requireNonNullElse(find, (input, startIndex, constants) -> {
                 final ParserSpec.Result<T> result = read(input, startIndex);
                 assertInput(result, input);
-                return result != null && constants.contains(result.value()) ? result : null;
+                if (result instanceof Result.Success<T> success && !constants.contains(success.value())) {
+                    return error(success.input(), "Expected constants '" + constants + "' but found '" + success.value() + "'", 0);
+                }
+                return result;
             });
             readExact = Objects.requireNonNullElse(readExact, (input) -> {
                 final ParserSpec.Result<T> result = read(input, 0);
-                if (result != null && input.length() == result.index()) {
+                if (result instanceof Result.Success<T> success && input.length() == success.index()) {
                     assertInput(result, input);
-                    return result.value();
+                    return success.value();
                 }
                 return null;
             });
@@ -275,7 +284,7 @@ final class ParserSpecTypes {
         }
 
         @Override
-        public ParserSpec.@Nullable Result<T> read(@NotNull String input, int startIndex) {
+        public ParserSpec.@NotNull Result<T> read(@NotNull String input, int startIndex) {
             try {
                 return read.read(input, startIndex);
             } catch (Exception e) {
@@ -284,7 +293,7 @@ final class ParserSpecTypes {
         }
 
         @Override
-        public ParserSpec.@Nullable Result<T> equals(@NotNull String input, int startIndex, @NotNull T constant) {
+        public ParserSpec.@NotNull Result<T> equals(@NotNull String input, int startIndex, @NotNull T constant) {
             try {
                 return equals.equals(input, startIndex, constant);
             } catch (Exception e) {
@@ -293,7 +302,7 @@ final class ParserSpecTypes {
         }
 
         @Override
-        public ParserSpec.@Nullable Result<T> find(@NotNull String input, int startIndex, @NotNull Set<@NotNull T> constants) {
+        public ParserSpec.@NotNull Result<T> find(@NotNull String input, int startIndex, @NotNull Set<@NotNull T> constants) {
             try {
                 return find.find(input, startIndex, constants);
             } catch (Exception e) {
@@ -329,10 +338,17 @@ final class ParserSpecTypes {
         }
     }
 
-    record ResultImpl<T>(String input, int index, T value) implements ParserSpec.Result<T> {
+    record ResultSuccessImpl<T>(String input, int index, T value) implements ParserSpec.Result.Success<T> {
+    }
+
+    record ResultIncompatibleImpl<T>() implements ParserSpec.Result.IncompatibleType<T> {
+    }
+
+    record ResultErrorImpl<T>(String input, String message, int error) implements ParserSpec.Result.SyntaxError<T> {
     }
 
     static void assertInput(ParserSpec.@UnknownNullability Result<?> result, String input) {
-        assert result == null || result.input().equals(input) : "input mismatch: " + result.input() + " != " + input;
+        assert !(result instanceof ParserSpec.Result.Success<?> su)
+                || su.input().equals(input) : "input mismatch: " + result + " != " + input;
     }
 }

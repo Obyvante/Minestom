@@ -259,7 +259,7 @@ public class ArgSpecTest {
         Custom<Integer> parser = custom(ParserSpec.reader((s, startIndex) -> {
             final String input = s.substring(startIndex);
             if (!input.startsWith("1")) return null;
-            return ParserSpec.Result.of("1", startIndex + 1, 1);
+            return ParserSpec.Result.success("1", startIndex + 1, 1);
         }));
         assertValidSpec(parser, 1, 1, "1");
         assertInvalidSpec(parser, "5 1");
@@ -302,7 +302,7 @@ public class ArgSpecTest {
 
     static <T> void assertValidSpec(Parser<T> parser, T expectedValue, int expectedIndex, String input) {
         final ParserSpec<T> spec = parser.spec();
-        final ParserSpec.Result<T> result = spec.read(input);
+        final ParserSpec.Result.Success<T> result = (ParserSpec.Result.Success<T>) spec.read(input);
         assertNotNull(result);
         assertEquals(input.substring(0, expectedIndex), result.input(), "Invalid input(" + expectedIndex + ") for '" + input + "'");
         assertEquals(expectedValue, result.value(), "Invalid value");
@@ -311,7 +311,7 @@ public class ArgSpecTest {
         // Assert read with non-zero initial index
         input = "1 " + input;
         expectedIndex += 2;
-        final ParserSpec.Result<T> result2 = spec.read(input, 2);
+        final ParserSpec.Result.Success<T> result2 = (ParserSpec.Result.Success<T>) spec.read(input, 2);
         assertNotNull(result2);
         assertEquals(input.substring(2, expectedIndex), result2.input(), "Invalid input(" + expectedIndex + ") for '" + input + "'");
         assertEquals(expectedValue, result2.value(), "Invalid value");
@@ -320,7 +320,10 @@ public class ArgSpecTest {
 
     static <T> void assertInvalidSpec(Parser<T> parser, String input) {
         final ParserSpec<?> spec = parser.spec();
-        assertNull(spec.read(input));
+        final ParserSpec.Result<?> result = spec.read(input);
+        if (result instanceof ParserSpec.Result.Success<?>) {
+            fail("Expected failure for '" + input + "'");
+        }
     }
 
     static <T> void assertValidSpecExact(Parser<T> parser, T expected, String input) {

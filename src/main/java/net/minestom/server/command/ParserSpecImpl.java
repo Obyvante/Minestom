@@ -9,6 +9,8 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
+import static net.minestom.server.command.ParserSpec.Result.*;
+
 final class ParserSpecImpl {
 
     /**
@@ -18,7 +20,7 @@ final class ParserSpecImpl {
      */
     record Constant1<T>(Type<T> type, T constant) implements ParserSpec<T> {
         @Override
-        public @Nullable Result<T> read(@NotNull String input, int startIndex) {
+        public @NotNull Result<T> read(@NotNull String input, int startIndex) {
             return type.equals(input, startIndex, constant);
         }
 
@@ -41,7 +43,7 @@ final class ParserSpecImpl {
         }
 
         @Override
-        public @Nullable Result<T> read(@NotNull String input, int startIndex) {
+        public @NotNull Result<T> read(@NotNull String input, int startIndex) {
             return type.find(input, startIndex, constants);
         }
 
@@ -58,7 +60,7 @@ final class ParserSpecImpl {
      */
     record Reader<T>(BiFunction<String, Integer, Result<T>> reader) implements ParserSpec<T> {
         @Override
-        public @Nullable Result<T> read(@NotNull String input, int startIndex) {
+        public @NotNull Result<T> read(@NotNull String input, int startIndex) {
             return reader.apply(input, startIndex);
         }
     }
@@ -70,17 +72,17 @@ final class ParserSpecImpl {
      */
     record Specialized<T>(ParserSpec<T> spec, Predicate<T> filter) implements ParserSpec<T> {
         @Override
-        public @Nullable Result<T> read(@NotNull String input, int startIndex) {
+        public @NotNull Result<T> read(@NotNull String input, int startIndex) {
             final Result<T> result = spec.read(input);
-            if (result == null) return null;
+            if (!(result instanceof Result.Success<T> success)) return result;
             final Predicate<T> filter = this.filter;
-            return filter == null || filter.test(result.value()) ? result : null;
+            return filter == null || filter.test(success.value()) ? result : error(input, "Invalid filter", 0);
         }
     }
 
     record Legacy<T>(Argument<T> argument) implements ParserSpec<T> {
         @Override
-        public @Nullable Result<T> read(@NotNull String input, int startIndex) {
+        public @NotNull Result<T> read(@NotNull String input, int startIndex) {
             final String sub = input.substring(startIndex);
             final String[] split = sub.split(" ");
             // Handle specific type without loop
@@ -90,15 +92,15 @@ final class ParserSpecImpl {
                     final String word = split[0];
                     final int index = startIndex + word.length();
                     final T value = argument.parse(word);
-                    return new ParserSpecTypes.ResultImpl<>(input, index, value);
+                    return success(input, index, value);
                 }
                 // Complete input argument
                 if (argument.useRemaining()) {
                     final T value = argument.parse(sub);
-                    return new ParserSpecTypes.ResultImpl<>(input, input.length(), value);
+                    return success(input, input.length(), value);
                 }
             } catch (ArgumentSyntaxException ignored) {
-                return null;
+                return incompatible();
             }
             // Bruteforce
             assert argument.allowSpace() && !argument.useRemaining();
@@ -110,11 +112,11 @@ final class ParserSpecImpl {
                     final String result = current.toString();
                     final T value = argument.parse(result);
                     final int index = result.length() + startIndex;
-                    return new ParserSpecTypes.ResultImpl<>(result, index, value);
+                    return success(result, index, value);
                 } catch (ArgumentSyntaxException ignored) {
                 }
             }
-            return null;
+            return incompatible();
         }
     }
 }
