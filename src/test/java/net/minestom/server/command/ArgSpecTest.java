@@ -241,6 +241,7 @@ public class ArgSpecTest {
                 """);
 
         assertValidSpec(String().type(StringParser.Type.QUOTED), "text", 4, "text");
+        assertValidSpec(String().type(StringParser.Type.QUOTED), "text", 4, "text test");
     }
 
     @Test
