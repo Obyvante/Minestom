@@ -4,7 +4,6 @@ import net.minestom.server.utils.StringReaderUtils;
 import net.minestom.server.utils.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.Objects;
 import java.util.Set;
@@ -18,13 +17,13 @@ final class ParserSpecTypes {
                     // Whole input is a float
                     final String word = input.substring(startIndex);
                     final Boolean value = word.equals("true") ? Boolean.TRUE : word.equals("false") ? Boolean.FALSE : null;
-                    if (value == null) return null;
+                    if (value == null) return incompatible();
                     return success(word, input.length(), value);
                 } else {
                     // Part of input is a float
                     final String word = input.substring(startIndex, index);
                     final Boolean value = word.equals("true") ? Boolean.TRUE : word.equals("false") ? Boolean.FALSE : null;
-                    if (value == null) return null;
+                    if (value == null) return incompatible();
                     return success(word, index, value);
                 }
             })
@@ -95,7 +94,7 @@ final class ParserSpecTypes {
                     final int index = startIndex + length;
                     return success(constant, index, constant);
                 } else {
-                    return null;
+                    return incompatible();
                 }
             })
             .find((input, startIndex, constants) -> {
@@ -106,7 +105,7 @@ final class ParserSpecTypes {
                         return success(constant, index, constant);
                     }
                 }
-                return null;
+                return incompatible();
             })
             .equalsExact((input, constant) -> input.equals(constant) ? constant : null)
             .findExact((input, constants) -> constants.contains(input) ? input : null)
@@ -114,7 +113,7 @@ final class ParserSpecTypes {
     static final ParserSpec.Type<String> QUOTED_PHRASE = ParserSpecTypes.builder((input, startIndex) -> {
                 final int inclusiveEnd = StringReaderUtils.endIndexOfQuotableString(input, startIndex);
                 if (inclusiveEnd == -1) {
-                    return null;
+                    return incompatible();
                 } else {
                     final char type = input.charAt(startIndex);
                     final int exclusiveEnd = inclusiveEnd + 1;
@@ -297,7 +296,8 @@ final class ParserSpecTypes {
     record ResultErrorImpl<T>(String input, String message, int error) implements ParserSpec.Result.SyntaxError<T> {
     }
 
-    static void assertInput(ParserSpec.@UnknownNullability Result<?> result, String input) {
+    static void assertInput(ParserSpec.Result<?> result, String input) {
+        assert result != null : "Result must not be null";
         assert !(result instanceof ParserSpec.Result.Success<?> su)
                 || su.input().equals(input) : "input mismatch: " + result + " != " + input;
     }
