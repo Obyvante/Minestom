@@ -70,7 +70,14 @@ final class ParserImpl {
                 return ParserSpec.Type.FLOAT;
             } else {
                 return ParserSpec.specialized(DEFAULT_SPEC,
-                        num -> (min == null || num >= min) && (max == null || num <= max));
+                        result -> {
+                            final Float value = result.value();
+                            if (min != null && value < min)
+                                return ParserSpec.Result.error(result.input(), "value is too low", 2);
+                            if (max != null && value > max)
+                                return ParserSpec.Result.error(result.input(), "value is too high", 3);
+                            return result;
+                        });
             }
         }
     }
@@ -94,7 +101,14 @@ final class ParserImpl {
                 return DEFAULT_SPEC;
             } else {
                 return ParserSpec.specialized(DEFAULT_SPEC,
-                        num -> (min == null || num >= min) && (max == null || num <= max));
+                        result -> {
+                            final Double value = result.value();
+                            if (min != null && value < min)
+                                return ParserSpec.Result.error(result.input(), "value is too low", 2);
+                            if (max != null && value > max)
+                                return ParserSpec.Result.error(result.input(), "value is too high", 3);
+                            return result;
+                        });
             }
         }
     }
@@ -118,7 +132,14 @@ final class ParserImpl {
                 return DEFAULT_SPEC;
             } else {
                 return ParserSpec.specialized(DEFAULT_SPEC,
-                        num -> (min == null || num >= min) && (max == null || num <= max));
+                        result -> {
+                            final Integer value = result.value();
+                            if (min != null && value < min)
+                                return ParserSpec.Result.error(result.input(), "value is too low", 2);
+                            if (max != null && value > max)
+                                return ParserSpec.Result.error(result.input(), "value is too high", 3);
+                            return result;
+                        });
             }
         }
     }
@@ -142,7 +163,14 @@ final class ParserImpl {
                 return DEFAULT_SPEC;
             } else {
                 return ParserSpec.specialized(DEFAULT_SPEC,
-                        num -> (min == null || num >= min) && (max == null || num <= max));
+                        result -> {
+                            final Long value = result.value();
+                            if (min != null && value < min)
+                                return ParserSpec.Result.error(result.input(), "value is too low", 2);
+                            if (max != null && value > max)
+                                return ParserSpec.Result.error(result.input(), "value is too high", 3);
+                            return result;
+                        });
             }
         }
     }

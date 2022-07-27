@@ -26,10 +26,10 @@ public class CommandCallbackTest {
         manager.register(command);
 
         manager.executeServerCommand("name a");
-        assertEquals(callback.get(), 1);
+        assertEquals(1, callback.get());
 
         callback.set(-1);
         manager.executeServerCommand("name 1");
-        assertEquals(callback.get(), 2);
+        assertEquals(2, callback.get());
     }
 }

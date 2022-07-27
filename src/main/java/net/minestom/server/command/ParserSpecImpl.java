@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
+import java.util.function.Function;
 
 import static net.minestom.server.command.ParserSpec.Result.*;
 
@@ -70,13 +70,12 @@ final class ParserSpecImpl {
      * <p>
      * The filter means that the parsec input has to pass through the arbitrary function, limiting potential optimizations.
      */
-    record Specialized<T>(ParserSpec<T> spec, Predicate<T> filter) implements ParserSpec<T> {
+    record Specialized<T>(ParserSpec<T> spec, Function<Success<T>, Result<T>> filter) implements ParserSpec<T> {
         @Override
         public @NotNull Result<T> read(@NotNull String input, int startIndex) {
             final Result<T> result = spec.read(input);
             if (!(result instanceof Result.Success<T> success)) return result;
-            final Predicate<T> filter = this.filter;
-            return filter == null || filter.test(success.value()) ? result : error(input, "Invalid filter", 0);
+            return filter.apply(success);
         }
     }
 

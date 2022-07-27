@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
+import java.util.function.Function;
 
 sealed interface ParserSpec<T>
         permits ParserSpec.Type, ParserSpecImpl.Constant1, ParserSpecImpl.ConstantN,
@@ -25,7 +25,8 @@ sealed interface ParserSpec<T>
         return new ParserSpecImpl.Reader<>(reader);
     }
 
-    static <T> @NotNull ParserSpec<T> specialized(@NotNull ParserSpec<T> spec, @NotNull Predicate<T> filter) {
+    static <T> @NotNull ParserSpec<T> specialized(@NotNull ParserSpec<T> spec,
+                                                  @NotNull Function<Result.@NotNull Success<T>, @NotNull Result<T>> filter) {
         return new ParserSpecImpl.Specialized<>(spec, filter);
     }
 
