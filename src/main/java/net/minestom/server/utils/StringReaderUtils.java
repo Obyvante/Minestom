@@ -47,7 +47,7 @@ public final class StringReaderUtils {
             return nextIndexOfEscapable(charSequence, offsetStart, '"', '\\');
         } else {
             int res = nextIndexOf(charSequence, offsetStart, ' ');
-            res = res == -1 ? charSequence.length() - 1 : res;
+            res = res == -1 ? charSequence.length() - 1 : res - 1;
             final int a, b;
             if (((a = nextIndexOf(charSequence, offsetStart, '"')) > -1 && a <= res) ||
                     ((b = nextIndexOf(charSequence, offsetStart, '\'')) > -1 && b <= res)) return -1;
