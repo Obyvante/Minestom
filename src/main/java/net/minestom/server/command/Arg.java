@@ -45,7 +45,8 @@ interface Arg<T> {
     @NotNull Arg<T> callback(@Nullable ArgumentCallback callback);
 
     interface Suggestion {
-        interface Type {
+        sealed interface Type
+                permits ArgImpl.SuggestionTypeImpl {
             @NotNull String name();
 
             @NotNull Entry suggest(@NotNull CommandSender sender, @NotNull CommandContext context);
@@ -67,7 +68,8 @@ interface Arg<T> {
             }
         }
 
-        interface Entry {
+        sealed interface Entry
+                permits ArgImpl.SuggestionEntryImpl {
             static @NotNull Entry of(int start, int length, @NotNull List<Match> matches) {
                 return new ArgImpl.SuggestionEntryImpl(start, length, matches);
             }
@@ -78,7 +80,8 @@ interface Arg<T> {
 
             @NotNull List<@NotNull Match> matches();
 
-            interface Match {
+            sealed interface Match
+                    permits ArgImpl.MatchImpl {
                 @NotNull String text();
 
                 @Nullable Component tooltip();
